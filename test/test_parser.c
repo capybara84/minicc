@@ -21,14 +21,14 @@ int main(int argc, char *argv[])
     int result = 0;
 
     if (argc < 2) {
-        printf("usage: test_parser [-ds] filename\n");
+        printf("usage: test_parser [-ds][-dp] filename\n");
         return 1;
     }
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-ds") == 0)
             set_debug("scanner");
         else if (strcmp(argv[i], "-dp") == 0)
-            set_debug("parser");
+            set_debug("parser_trace");
         else
             result += test(argv[i]);
     }

@@ -1788,8 +1788,6 @@ bool parse(PARSER *pars)
 
     assert(pars);
 
-    /*TODO node */
-
     next(pars);
     while (!is_token(pars, TK_EOF)) {
         if (!parse_external_declaration(pars))
