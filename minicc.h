@@ -15,8 +15,10 @@ typedef int bool;
 #define false   0
 #define true    1
 
+#ifndef NDEBUG
 void set_debug(const char *s);
 bool is_debug(const char *s);
+#endif
 
 typedef struct {
     const char *filename;
@@ -64,10 +66,51 @@ typedef struct {
 SCANNER *open_scanner_text(const char *filename, const char *text);
 SCANNER *open_scanner_file(const char *filename);
 bool close_scanner(SCANNER *scan);
+bool is_next_colon(SCANNER *scan);
 TOKEN next_token(SCANNER *scan);
 char *intern(const char *s);
 const char *token_to_string(TOKEN tk);
 const char *scan_token_to_string(SCANNER *scan, TOKEN tk);
+
+typedef enum {
+    T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
+    T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
+    T_POINTER, T_FUNC, T_STRUCT, T_UNION, T_ENUM,
+} TYPE_KIND;
+
+typedef struct type {
+    TYPE_KIND kind;
+    struct type *type;
+    struct param *param;
+} TYPE;
+
+typedef struct param {
+    struct param *next;
+    char *id;
+    TYPE *type;
+} PARAM;
+
+typedef enum {
+    SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN,
+} STORAGE_CLASS;
+
+typedef enum {
+    SK_LOCAL, SK_GLOBAL, SK_PARAM, SK_FUNC,
+} SYMBOL_KIND;
+
+typedef struct symbol {
+    struct symbol *next;
+    STORAGE_CLASS sclass;
+    SYMBOL_KIND kind;
+    const char *id;
+    TYPE *type;
+    struct symtab *tab;
+} SYMBOL;
+
+typedef struct symtab {
+    SYMBOL *sym;
+    struct symtab *up;
+} SYMTAB;
 
 typedef struct {
     SCANNER *scan;

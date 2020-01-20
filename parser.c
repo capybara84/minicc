@@ -901,8 +901,13 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_ID:
-        /*TODO ID ':' statement */
-
+        if (is_next_colon(pars->scan)) {
+            next(pars);
+            if (!expect(pars, TK_COLON))
+                return false;
+            break;
+        }
+        /*THROUGH*/
     default:
         if (!parse_expression(pars))
             return false;
@@ -1247,7 +1252,6 @@ type_name
 */
 static bool parse_type_name(PARSER *pars)
 {
-    /*TODO type*/
     ENTER("parse_type_name");
     assert(pars);
 
@@ -1787,8 +1791,6 @@ bool parse(PARSER *pars)
     ENTER("parse");
 
     assert(pars);
-
-    /*TODO node */
 
     next(pars);
     while (!is_token(pars, TK_EOF)) {
