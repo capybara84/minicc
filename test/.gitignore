@@ -1,0 +1,4 @@
+*.o
+*.output
+test_scanner
+test_parser
