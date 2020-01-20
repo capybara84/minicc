@@ -8,12 +8,12 @@
 # define TRACE(fn)      ((void) 0)
 #else
 static int s_indent = 0;
-# define ENTER(fn)  if (is_debug("parser_trace")) \
+# define ENTER(fn)      if (is_debug("parser_trace")) \
                             printf("%*sENTER %s\n", s_indent++, "", (fn))
-# define LEAVE(fn)  if (is_debug("parser_trace")) \
+# define LEAVE(fn)      if (is_debug("parser_trace")) \
                             printf("%*sLEAVE %s\n", --s_indent, "", (fn))
-# define TRACE(fn)  if (is_debug("parser_trace")) \
-                            printf("%*sTRACE %s\n", s_indent, "", (fn))
+# define TRACE(fn,s)    if (is_debug("parser_trace")) \
+                            printf("%*sTRACE %s %s\n", s_indent, "", (fn), (s))
 #endif
 
 
@@ -289,6 +289,7 @@ static bool parse_primary_expression(PARSER *pars)
 
     switch (pars->token) {
     case TK_ID:
+        TRACE("parse_primary_expression", "ID");
         next(pars);
         break;
     case TK_INT_LIT:
@@ -299,9 +300,11 @@ static bool parse_primary_expression(PARSER *pars)
     case TK_FLOAT_LIT:
     case TK_DOUBLE_LIT:
     case TK_STRING_LIT:
+        TRACE("parse_primary_expression", "_LIT");
         next(pars);
         break;
     case TK_LPAR:
+        TRACE("parse_primary_expression", "()");
         next(pars);
         if (!parse_expression(pars))
             return false;
@@ -309,7 +312,7 @@ static bool parse_primary_expression(PARSER *pars)
             return false;
         break;
     default:
-        parser_error(pars, "syntax error");
+        parser_error(pars, "syntax error (expression)");
         return false;
     }
 
@@ -777,6 +780,7 @@ static bool parse_statement(PARSER *pars)
     
     switch (pars->token) {
     case TK_CASE:
+        TRACE("parse_statement", "case");
         next(pars);
         if (!parse_constant_expression(pars))
             return false;
@@ -786,6 +790,7 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_DEFAULT:
+        TRACE("parse_statement", "default");
         next(pars);
         if (!expect(pars, TK_COLON))
             return false;
@@ -793,10 +798,12 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_BEGIN:
+        TRACE("parse_statement", "compound");
         if (!parse_compound_statement(pars))
             return false;
         break;
     case TK_IF:
+        TRACE("parse_statement", "if");
         next(pars);
         if (!expect(pars, TK_LPAR))
             return false;
@@ -813,6 +820,7 @@ static bool parse_statement(PARSER *pars)
         }
         break;
     case TK_SWITCH:
+        TRACE("parse_statement", "switch");
         next(pars);
         if (!expect(pars, TK_LPAR))
             return false;
@@ -824,6 +832,7 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_WHILE:
+        TRACE("parse_statement", "while");
         next(pars);
         if (!expect(pars, TK_LPAR))
             return false;
@@ -835,6 +844,7 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_DO:
+        TRACE("parse_statement", "do");
         next(pars);
         if (!parse_statement(pars))
             return false;
@@ -850,6 +860,7 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_FOR:
+        TRACE("parse_statement", "for");
         next(pars);
         if (!expect(pars, TK_LPAR))
             return false;
@@ -875,6 +886,7 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_GOTO:
+        TRACE("parse_statement", "goto");
         next(pars);
         if (!expect(pars, TK_ID))
             return false;
@@ -882,16 +894,19 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_CONTINUE:
+        TRACE("parse_statement", "continue");
         next(pars);
         if (!expect(pars, TK_SEMI))
             return false;
         break;
     case TK_BREAK:
+        TRACE("parse_statement", "break");
         next(pars);
         if (!expect(pars, TK_SEMI))
             return false;
         break;
     case TK_RETURN:
+        TRACE("parse_statement", "return");
         next(pars);
         if (is_expression(pars)) {
             if (!parse_expression(pars))
@@ -902,6 +917,7 @@ static bool parse_statement(PARSER *pars)
         break;
     case TK_ID:
         if (is_next_colon(pars->scan)) {
+            TRACE("parse_statement", "label");
             next(pars);
             if (!expect(pars, TK_COLON))
                 return false;
@@ -909,8 +925,11 @@ static bool parse_statement(PARSER *pars)
         }
         /*THROUGH*/
     default:
-        if (!parse_expression(pars))
-            return false;
+        TRACE("parse_statement", "expression");
+        if (pars->token != TK_SEMI) {
+            if (!parse_expression(pars))
+                return false;
+        }
         if (!expect(pars, TK_SEMI))
             return false;
         break;
@@ -1762,7 +1781,7 @@ static bool parse_external_declaration(PARSER *pars)
         } else
             break;
     }
-    TRACE("parse_external_declaration");
+    TRACE("parse_external_declaration", "");
     if (is_token(pars, TK_SEMI)) {
         next(pars);
     } else {
