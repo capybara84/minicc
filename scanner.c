@@ -289,6 +289,13 @@ static TOKEN scan_str(SCANNER *scan)
     return TK_STRING_LIT;
 }
 
+bool is_next_colon(SCANNER *scan)
+{
+    while (is_white(scan->ch))
+        next_char(scan);
+    return (scan->ch == ':');
+}
+
 TOKEN next_token(SCANNER *scan)
 {
 retry:

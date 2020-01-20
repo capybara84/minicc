@@ -66,6 +66,7 @@ typedef struct {
 SCANNER *open_scanner_text(const char *filename, const char *text);
 SCANNER *open_scanner_file(const char *filename);
 bool close_scanner(SCANNER *scan);
+bool is_next_colon(SCANNER *scan);
 TOKEN next_token(SCANNER *scan);
 char *intern(const char *s);
 const char *token_to_string(TOKEN tk);

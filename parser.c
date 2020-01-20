@@ -901,8 +901,13 @@ static bool parse_statement(PARSER *pars)
             return false;
         break;
     case TK_ID:
-        /*TODO ID ':' statement */
-
+        if (is_next_colon(pars->scan)) {
+            next(pars);
+            if (!expect(pars, TK_COLON))
+                return false;
+            break;
+        }
+        /*THROUGH*/
     default:
         if (!parse_expression(pars))
             return false;

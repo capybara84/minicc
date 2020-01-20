@@ -7,7 +7,7 @@ static int test(const char *filename)
 
     pars = open_parser(filename);
     if (pars == NULL) {
-        fprintf(stderr, "open_parser(%s) failed\n", filename);
+        fprintf(stderr, "couldn't open '%s'\n", filename);
         return 1;
     }
     result = parse(pars) ? 0 : 1;
@@ -15,22 +15,39 @@ static int test(const char *filename)
     return result;
 }
 
+void usage()
+{
+    printf("usage: test_parser [-d[istp]] filename\n");
+    printf(" -di  debug ident\n");
+    printf(" -ds  debug scanner\n");
+    printf(" -dt  debug parser_trace\n");
+    printf(" -dp  debug parser\n");
+    exit(1);
+}
+
 int main(int argc, char *argv[])
 {
-    int i;
+    int i, j;
     int result = 0;
 
-    if (argc < 2) {
-        printf("usage: test_parser [-ds][-dp] filename\n");
-        return 1;
-    }
+    if (argc < 2)
+        usage();
     for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-ds") == 0)
-            set_debug("scanner");
-        else if (strcmp(argv[i], "-dp") == 0)
-            set_debug("parser_trace");
-        else
-            result += test(argv[i]);
+        if (argv[i][0] == '-') {
+            if (argv[i][1] == 'd') {
+                for (j = 2; argv[i][j] != 0; j++) {
+                    switch (argv[i][j]) {
+                    case 'i': set_debug("ident"); break;
+                    case 's': set_debug("scanner"); break;
+                    case 't': set_debug("parser_trace"); break;
+                    case 'p': set_debug("parser"); break;
+                    default: usage();
+                    }
+                }
+            } else
+                usage();
+        } else if (test(argv[i]) != 0)
+            result = 1;
     }
     return result;
 }
