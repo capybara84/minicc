@@ -1247,7 +1247,6 @@ type_name
 */
 static bool parse_type_name(PARSER *pars)
 {
-    /*TODO type*/
     ENTER("parse_type_name");
     assert(pars);
 
