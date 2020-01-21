@@ -1973,12 +1973,12 @@ static bool parse_declaration_specifiers(PARSER *pars,
     assert(pars);
 
     if (!parse_declaration_specifier(pars, file_scoped, parametered,
-                typ, psc, ptq))
+                *typ, psc, ptq))
         return false;
     
     while (is_declaration_specifier(pars)) {
         if (!parse_declaration_specifier(pars, file_scoped, parametered,
-                    typ, psc, ptq))
+                    *typ, psc, ptq))
             return false;
     }
 
