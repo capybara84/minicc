@@ -72,6 +72,7 @@ char *intern(const char *s);
 const char *token_to_string(TOKEN tk);
 const char *scan_token_to_string(SCANNER *scan, TOKEN tk);
 
+/*
 typedef enum {
     T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
@@ -111,6 +112,26 @@ typedef struct symtab {
     SYMBOL *sym;
     struct symtab *up;
 } SYMTAB;
+*/
+
+typedef enum {
+    NK_
+} NODE_KIND;
+
+typedef struct node {
+    NODE_KIND kind;
+    POS pos;
+    union {
+        struct {
+            struct node *left;
+            struct node *right;
+        } link;
+        int num;
+        const char *id;
+    } u;
+} NODE;
+
+void print_node(const NODE *np);
 
 typedef struct {
     SCANNER *scan;
