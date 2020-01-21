@@ -2020,6 +2020,9 @@ static bool parse_external_declaration(PARSER *pars)
             return false;
     }
 
+    printf("TYPE:%s\n", get_type_string(typ));
+
+
     for (;;) {
         if (is_declarator(pars)) {
             if (!parse_declarator(pars))
