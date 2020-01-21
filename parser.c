@@ -2,8 +2,12 @@
 
 TYPE *new_unknown_type(void)
 {
-/*TODO*/
-return NULL;
+    TYPE *tp = (TYPE*) alloc(sizeof (TYPE));
+    tp->kind = T_UNKNOWN;
+    tp->is_const = false;
+    tp->type = NULL;
+    tp->param = NULL;
+    return tp;
 }
 
 NODE *new_node(NODE_KIND kind, const POS *pos)
@@ -180,6 +184,15 @@ static void parser_error(PARSER *pars, const char *s, ...)
     error(&pars->scan->pos, buffer2);
 
     skip_error(pars);
+}
+
+static void parser_warning(PARSER *pars, const char *s, ...)
+{
+    va_list ap;
+
+    va_start(ap, s);
+    vwarning(&pars->scan->pos, s, ap);
+    va_end(ap);
 }
 
 static bool is_token_with_array(PARSER *pars, TOKEN begin_with[], int count)

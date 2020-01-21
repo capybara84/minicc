@@ -93,6 +93,9 @@ typedef struct param {
     TYPE *type;
 } PARAM;
 
+
+const char *get_type_string(const TYPE *typ);
+
 typedef enum {
     SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN, SC_TYPEDEF,
 } STORAGE_CLASS;
