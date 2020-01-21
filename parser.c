@@ -39,7 +39,14 @@ NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id)
 
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
 {
-
+    NODE *np = new_node2(kind, pos, n, NULL);
+    NODE *p;
+    if (top == NULL)
+        return np;
+    for (p = top; p->u.link.right != NULL; p = p->u.link.right)
+        ;
+    p->u.link.right = np;
+    return top;
 }
 
 void fprint_node(FILE *fp, const NODE *np)
@@ -47,6 +54,8 @@ void fprint_node(FILE *fp, const NODE *np)
     if (np == NULL)
         return;
     switch (np->kind) {
+    case NK_EXTERNAL_DECL:
+        break;
     }
 }
 
@@ -1863,7 +1872,7 @@ static bool parse_external_declaration(PARSER *pars)
 translation_unit
     = {external_declaration}
 */
-bool parse(PARSER *pars, NODE **node)
+bool parse(PARSER *pars)
 {
     bool result = true;
 
@@ -1873,12 +1882,8 @@ bool parse(PARSER *pars, NODE **node)
 
     next(pars);
     while (!is_token(pars, TK_EOF)) {
-        NODE *np;
-        POS *pos = get_pos(pars);
-        if (!parse_external_declaration(pars, &np))
+        if (!parse_external_declaration(pars))
             result = false;
-        else
-            *node = node_link(NK_EDECL, pos, np, *node);
     }
 
     LEAVE("parse");

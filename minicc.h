@@ -115,7 +115,7 @@ typedef struct symtab {
 */
 
 typedef enum {
-    NK_
+    NK_EXTERNAL_DECL,
 } NODE_KIND;
 
 typedef struct node {
