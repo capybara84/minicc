@@ -1136,6 +1136,7 @@ declaration
 */
 static bool parse_declaration(PARSER *pars)
 {
+
     ENTER("parse_declaration");
 
     assert(pars);
@@ -1815,22 +1816,33 @@ static bool parse_declaration_specifier(PARSER *pars,
     return true;
 }
 
+bool merge_decl_spec(PARSER *pars, 
+                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
+{
+}
+
 /*
 declaration_specifiers
     = declaration_specifier {declaration_specifier}
 */
-static bool parse_declaration_specifiers(PARSER *pars)
+static bool parse_declaration_specifiers(PARSER *pars,
+                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
 {
+    STORAGE_CLASS nsc = SC_DEFAULT;
+    TYPE_SPECIFIER nts = TS_DEFAULT;
+    TYPE_QUALIFIER ntq = TQ_DEFAULT;
     ENTER("parse_declaration_specifiers");
 
     assert(pars);
 
-    if (!parse_declaration_specifier(pars))
+    if (!parse_declaration_specifier(pars, &nsc, &nts, &ntq))
         return false;
-
+    merge_decl_spe(pars, psc, pts, ptq, nsc, nts, ntq);
+    
     while (is_declaration_specifier(pars)) {
-        if (!parse_declaration_specifier(pars))
+        if (!parse_declaration_specifier(pars, &nsc, &nts, &ntq))
             return false;
+        merge_decl_spec(pars, psc, pts, ptq, nsc, nts, ntq);
     }
 
     LEAVE("parse_declaration_specifiers");
@@ -1845,12 +1857,16 @@ external_declaration
 */
 static bool parse_external_declaration(PARSER *pars)
 {
+    STORAGE_CLASS sc = SC_DEFAULT;
+    TYPE_SPECIFIER ts = TS_DEFAULT;
+    TYPE_QUALIFIER tq = TQ_DEFAULT;
+
     ENTER("parse_external_declaration");
 
     assert(pars);
 
     if (is_declaration_specifiers(pars)) {
-        if (!parse_declaration_specifiers(pars))
+        if (!parse_declaration_specifiers(pars, &sc, &ts, &tq))
             return false;
     }
 
