@@ -1720,7 +1720,8 @@ type_specifier
 type_qualifier
 	= CONST | VOLATILE
 */
-static bool parse_declaration_specifier(PARSER *pars)
+static bool parse_declaration_specifier(PARSER *pars,
+                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
 {
     ENTER("parse_declaration_specifier");
 
@@ -1728,63 +1729,82 @@ static bool parse_declaration_specifier(PARSER *pars)
 
     switch (pars->token) {
     case TK_AUTO:
+        *psc = SC_AUTO;
         next(pars);
         break;
     case TK_REGISTER:
+        *psc = SC_REGISTER;
         next(pars);
         break;
     case TK_STATIC:
+        *psc = SC_STATIC;
         next(pars);
         break;
     case TK_EXTERN:
+        *psc = SC_EXTERN;
         next(pars);
         break;
     case TK_TYPEDEF:
+        *psc = SC_TYPEDEF;
         next(pars);
         break;
     case TK_VOID:
+        *pts = TS_VOID;
         next(pars);
         break;
     case TK_CHAR:
+        *pts = TS_CHAR;
         next(pars);
         break;
     case TK_SHORT:
+        *pts = TS_SHORT;
         next(pars);
         break;
     case TK_INT:
+        *pts = TS_INT;
         next(pars);
         break;
     case TK_LONG:
+        *pts = TS_LONG;
         next(pars);
         break;
     case TK_FLOAT:
+        *pts = TS_FLOAT;
         next(pars);
         break;
     case TK_DOUBLE:
+        *pts = TS_DOUBLE;
         next(pars);
         break;
     case TK_SIGNED:
+        *pts = TS_SIGNED;
         next(pars);
         break;
     case TK_UNSIGNED:
+        *pts = TS_UNSIGNED;
         next(pars);
         break;
     case TK_TYPEDEF_NAME:
+        *pts = TS_TYPEDEF_NAME;
         next(pars);
         break;
     case TK_STRUCT:
     case TK_UNION:
+        *pts = (pars->token == TK_STRUCT) ? TS_STRUCT : TS_UNION;
         if (!parse_struct_or_union_specifier(pars))
             return false;
         break;
     case TK_ENUM:
+        *pts = TS_ENUM;
         if (!parse_enum_specifier(pars))
             return false;
         break;
     case TK_CONST:
+        *ptq = TQ_CONST;
         next(pars);
         break;
     case TK_VOLATILE:
+        *ptq = TQ_VOLATILE;
         next(pars);
         break;
     default:

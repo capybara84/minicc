@@ -72,11 +72,11 @@ char *intern(const char *s);
 const char *token_to_string(TOKEN tk);
 const char *scan_token_to_string(SCANNER *scan, TOKEN tk);
 
-/*
 typedef enum {
     T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
-    T_POINTER, T_FUNC, T_STRUCT, T_UNION, T_ENUM,
+    T_STRUCT, T_UNION, T_ENUM, T_TYPEDEF_NAME,
+    T_POINTER, T_FUNC,
 } TYPE_KIND;
 
 typedef struct type {
@@ -93,7 +93,17 @@ typedef struct param {
 
 typedef enum {
     SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN,
+    SC_TYPEDEF,
 } STORAGE_CLASS;
+
+typedef enum {
+    TS_VOID, TS_CHAR, TS_SHORT, TS_INT, TS_LONG, TS_FLOAT, TS_DOUBLE,
+    TS_SIGNED, TS_UNSIGNED, TS_STRUCT, TS_UNION, TS_ENUM, TS_TYPEDEF_NAME,
+} TYPE_SPECIFIER;
+
+typedef enum {
+    TQ_CONST, TQ_VOLATILE,
+} TYPE_QUALIFIER;
 
 typedef enum {
     SK_LOCAL, SK_GLOBAL, SK_PARAM, SK_FUNC,
@@ -102,6 +112,7 @@ typedef enum {
 typedef struct symbol {
     struct symbol *next;
     STORAGE_CLASS sclass;
+    TYPE_QUALIFIER type_qual;
     SYMBOL_KIND kind;
     const char *id;
     TYPE *type;
@@ -112,7 +123,6 @@ typedef struct symtab {
     SYMBOL *sym;
     struct symtab *up;
 } SYMTAB;
-*/
 
 typedef enum {
     NK_EXTERNAL_DECL,
