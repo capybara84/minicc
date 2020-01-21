@@ -77,10 +77,12 @@ typedef enum {
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
     T_STRUCT, T_UNION, T_ENUM, T_TYPEDEF_NAME,
     T_POINTER, T_FUNC,
+    T_SIGNED, T_UNSIGNED,
 } TYPE_KIND;
 
 typedef struct type {
     TYPE_KIND kind;
+    bool is_const;
     struct type *type;
     struct param *param;
 } TYPE;
@@ -92,14 +94,8 @@ typedef struct param {
 } PARAM;
 
 typedef enum {
-    SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN,
-    SC_TYPEDEF,
+    SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN, SC_TYPEDEF,
 } STORAGE_CLASS;
-
-typedef enum {
-    TS_DEFAULT, TS_VOID, TS_CHAR, TS_SHORT, TS_INT, TS_LONG, TS_FLOAT, TS_DOUBLE,
-    TS_SIGNED, TS_UNSIGNED, TS_STRUCT, TS_UNION, TS_ENUM, TS_TYPEDEF_NAME,
-} TYPE_SPECIFIER;
 
 typedef enum {
     TQ_DEFAULT, TQ_CONST, TQ_VOLATILE,
@@ -112,8 +108,8 @@ typedef enum {
 typedef struct symbol {
     struct symbol *next;
     STORAGE_CLASS sclass;
-    TYPE_QUALIFIER type_qual;
     SYMBOL_KIND kind;
+    bool is_volatile;
     const char *id;
     TYPE *type;
     struct symtab *tab;

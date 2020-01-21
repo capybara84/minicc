@@ -1,5 +1,11 @@
 #include "minicc.h"
 
+TYPE *new_unknown_type(void)
+{
+/*TODO*/
+return NULL;
+}
+
 NODE *new_node(NODE_KIND kind, const POS *pos)
 {
     NODE *np = (NODE*) alloc(sizeof (NODE));
@@ -80,7 +86,7 @@ static int s_indent = 0;
                             printf("%*sTRACE %s %s\n", s_indent, "", (fn), (s))
 #endif
 
-static const POS *get_pos(const PARSER *pars)
+const POS *get_pos(const PARSER *pars)
 {
     return &pars->scan->pos;
 }
@@ -1007,7 +1013,7 @@ static bool parse_statement(PARSER *pars)
     return true;
 }
 
-static bool parse_declaration(PARSER *pars);
+static bool parse_declaration(PARSER *pars, bool parametered);
 
 /*
 compound_statement
@@ -1021,7 +1027,7 @@ static bool parse_compound_statement(PARSER *pars)
     if (!expect(pars, TK_BEGIN))
         return false;
     while (is_declaration(pars)) {
-        if (!parse_declaration(pars))
+        if (!parse_declaration(pars, false))
             return false;
     }
     while (is_statement(pars)) {
@@ -1128,20 +1134,26 @@ static bool parse_init_declarator_list(PARSER *pars)
     return true;
 }
 
-static bool parse_declaration_specifiers(PARSER *pars);
+static bool parse_declaration_specifiers(PARSER *pars,
+                bool file_scoped, bool parametered,
+                TYPE **typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq);
 
 /*
 declaration
 	= declaration_specifiers [init_declarator_list] ';'
 */
-static bool parse_declaration(PARSER *pars)
+static bool parse_declaration(PARSER *pars, bool parametered)
 {
+    TYPE *typ = new_unknown_type();
+    STORAGE_CLASS sc = SC_DEFAULT;
+    TYPE_QUALIFIER tq = TQ_DEFAULT;
 
     ENTER("parse_declaration");
 
     assert(pars);
 
-    if (!parse_declaration_specifiers(pars)) {
+    if (!parse_declaration_specifiers(pars, false,
+                    parametered, &typ, &sc, &tq)) {
         return false;
     }
     if (is_init_declarator_list(pars)) {
@@ -1415,10 +1427,14 @@ parameter_declaration
 */
 static bool parse_parameter_declaration(PARSER *pars)
 {
+    TYPE *typ = new_unknown_type();
+    STORAGE_CLASS sc = SC_DEFAULT;
+    TYPE_QUALIFIER tq = TQ_DEFAULT;
+
     ENTER("parse_parameter_declaration");
     assert(pars);
 
-    if (!parse_declaration_specifiers(pars))
+    if (!parse_declaration_specifiers(pars, false, true, &typ, &sc, &tq))
         return false;
     if (!parse_parameter_abstract_declarator(pars))
         return false;
@@ -1722,91 +1738,204 @@ type_qualifier
 	= CONST | VOLATILE
 */
 static bool parse_declaration_specifier(PARSER *pars,
-                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
+                bool file_scoped, bool parametered,
+                TYPE *typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq)
 {
+    bool combine_error = false;
     ENTER("parse_declaration_specifier");
 
     assert(pars);
 
     switch (pars->token) {
     case TK_AUTO:
-        *psc = SC_AUTO;
         next(pars);
+        if (file_scoped)
+            goto illegal_sc_on_file_scoped;
+        if (parametered)
+            goto invalid_in_func_decl;
+        if (*psc == SC_AUTO)
+            goto dup_warning;
+        if (*psc != SC_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *psc = SC_AUTO;
         break;
     case TK_REGISTER:
-        *psc = SC_REGISTER;
         next(pars);
+        if (file_scoped)
+            goto illegal_sc_on_file_scoped;
+        if (*psc == SC_REGISTER)
+            goto dup_warning;
+        if (*psc != SC_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *psc = SC_REGISTER;
         break;
     case TK_STATIC:
-        *psc = SC_STATIC;
         next(pars);
+        if (parametered)
+            goto invalid_in_func_decl;
+        if (*psc == SC_STATIC)
+            goto dup_warning;
+        if (*psc != SC_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *psc = SC_STATIC;
         break;
     case TK_EXTERN:
-        *psc = SC_EXTERN;
         next(pars);
+        if (parametered)
+            goto invalid_in_func_decl;
+        if (*psc == SC_EXTERN)
+            goto dup_warning;
+        if (*psc != SC_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *psc = SC_EXTERN;
         break;
     case TK_TYPEDEF:
-        *psc = SC_TYPEDEF;
         next(pars);
+        if (parametered)
+            goto invalid_in_func_decl;
+        if (*psc == SC_TYPEDEF)
+            goto dup_warning;
+        if (*psc != SC_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *psc = SC_TYPEDEF;
         break;
     case TK_VOID:
-        *pts = TS_VOID;
         next(pars);
+        if (typ->kind != T_UNKNOWN)
+            goto cannot_combine_decl_spec;
+        typ->kind  = T_VOID;
         break;
     case TK_CHAR:
-        *pts = TS_CHAR;
         next(pars);
+        if (typ->kind == T_SIGNED)
+            typ->kind = T_CHAR;
+        else if (typ->kind == T_UNSIGNED || typ->kind == T_UNKNOWN)
+            typ->kind = T_UCHAR;
+        else
+            goto cannot_combine_decl_spec;
         break;
     case TK_SHORT:
-        *pts = TS_SHORT;
         next(pars);
+        if (typ->kind == T_SIGNED || typ->kind == T_UNKNOWN)
+            typ->kind = T_SHORT;
+        else if (typ->kind == T_UNSIGNED)
+            typ->kind = T_USHORT;
+        else
+            goto cannot_combine_decl_spec;
         break;
     case TK_INT:
-        *pts = TS_INT;
         next(pars);
+        if (typ->kind == T_SIGNED || typ->kind == T_UNKNOWN)
+            typ->kind = T_INT;
+        else if (typ->kind == T_UNSIGNED)
+            typ->kind = T_UINT;
+        else
+            goto cannot_combine_decl_spec;
         break;
     case TK_LONG:
-        *pts = TS_LONG;
         next(pars);
+        if (typ->kind == T_SIGNED || typ->kind == T_UNKNOWN)
+            typ->kind = T_LONG;
+        else if (typ->kind == T_UNSIGNED)
+            typ->kind = T_ULONG;
+        else
+            goto cannot_combine_decl_spec;
         break;
     case TK_FLOAT:
-        *pts = TS_FLOAT;
         next(pars);
+        if (typ->kind != T_UNKNOWN)
+            goto cannot_combine_decl_spec;
+        typ->kind = T_FLOAT;
         break;
     case TK_DOUBLE:
-        *pts = TS_DOUBLE;
         next(pars);
+        if (typ->kind != T_UNKNOWN)
+            goto cannot_combine_decl_spec;
+        typ->kind = T_DOUBLE;
         break;
     case TK_SIGNED:
-        *pts = TS_SIGNED;
         next(pars);
+        switch (typ->kind) {
+        case T_UNKNOWN:
+            typ->kind = T_SIGNED;
+            break;
+        case T_CHAR:
+            typ->kind = T_CHAR;
+            break;
+        case T_SHORT:
+            typ->kind = T_SHORT;
+            break;
+        case T_INT:
+            typ->kind = T_INT;
+            break;
+        case T_LONG:
+            typ->kind = T_LONG;
+            break;
+        default:
+            goto cannot_combine_decl_spec;
+        }
         break;
     case TK_UNSIGNED:
-        *pts = TS_UNSIGNED;
         next(pars);
+        switch (typ->kind) {
+        case T_UNKNOWN:
+            typ->kind = T_UNSIGNED;
+            break;
+        case T_CHAR:
+            typ->kind = T_UCHAR;
+            break;
+        case T_SHORT:
+            typ->kind = T_USHORT;
+            break;
+        case T_INT:
+            typ->kind = T_UINT;
+            break;
+        case T_LONG:
+            typ->kind = T_ULONG;
+            break;
+        default:
+            goto cannot_combine_decl_spec;
+        }
         break;
     case TK_TYPEDEF_NAME:
-        *pts = TS_TYPEDEF_NAME;
         next(pars);
+        if (typ->kind != T_UNKNOWN)
+            goto cannot_combine_decl_spec;
+        typ->kind = T_TYPEDEF_NAME;
+        /*TODO*/
         break;
     case TK_STRUCT:
     case TK_UNION:
-        *pts = (pars->token == TK_STRUCT) ? TS_STRUCT : TS_UNION;
+        if (typ->kind != T_UNKNOWN)
+            combine_error = true;
+        typ->kind = (pars->token == TK_STRUCT) ? T_STRUCT : T_UNION;
+        /*TODO*/
         if (!parse_struct_or_union_specifier(pars))
             return false;
+        if (combine_error)
+            goto cannot_combine_decl_spec;
         break;
     case TK_ENUM:
-        *pts = TS_ENUM;
+        if (typ->kind != T_UNKNOWN)
+            combine_error = true;
+        typ->kind = T_ENUM;
+        /*TODO*/
         if (!parse_enum_specifier(pars))
             return false;
+        if (combine_error)
+            goto cannot_combine_decl_spec;
         break;
     case TK_CONST:
-        *ptq = TQ_CONST;
         next(pars);
+        if (*ptq != TQ_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *ptq = TQ_CONST;
         break;
     case TK_VOLATILE:
-        *ptq = TQ_VOLATILE;
         next(pars);
+        if (*ptq != TQ_DEFAULT)
+            goto cannot_combine_decl_spec;
+        *ptq = TQ_VOLATILE;
         break;
     default:
         parser_error(pars, "syntax error");
@@ -1814,11 +1943,21 @@ static bool parse_declaration_specifier(PARSER *pars,
     }
     LEAVE("parse_declaration_specifier");
     return true;
-}
 
-bool merge_decl_spec(PARSER *pars, 
-                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
-{
+dup_warning:
+    parser_warning(pars, "duplicate declaration specifier");
+    return true;
+
+illegal_sc_on_file_scoped:
+    parser_error(pars, "illegal storage class on file-scoped variable");
+    return false;
+invalid_in_func_decl:
+    parser_error(pars,
+        "invalid storage class specifier in function declarator");
+    return false;
+cannot_combine_decl_spec:
+    parser_error(pars, "cannot combine declaration specifier");
+    return false;
 }
 
 /*
@@ -1826,23 +1965,21 @@ declaration_specifiers
     = declaration_specifier {declaration_specifier}
 */
 static bool parse_declaration_specifiers(PARSER *pars,
-                STORAGE_CLASS *psc, TYPE_SPECIFIER *pts, TYPE_QUALIFIER *ptq)
+                bool file_scoped, bool parametered,
+                TYPE **typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq)
 {
-    STORAGE_CLASS nsc = SC_DEFAULT;
-    TYPE_SPECIFIER nts = TS_DEFAULT;
-    TYPE_QUALIFIER ntq = TQ_DEFAULT;
     ENTER("parse_declaration_specifiers");
 
     assert(pars);
 
-    if (!parse_declaration_specifier(pars, &nsc, &nts, &ntq))
+    if (!parse_declaration_specifier(pars, file_scoped, parametered,
+                typ, psc, ptq))
         return false;
-    merge_decl_spe(pars, psc, pts, ptq, nsc, nts, ntq);
     
     while (is_declaration_specifier(pars)) {
-        if (!parse_declaration_specifier(pars, &nsc, &nts, &ntq))
+        if (!parse_declaration_specifier(pars, file_scoped, parametered,
+                    typ, psc, ptq))
             return false;
-        merge_decl_spec(pars, psc, pts, ptq, nsc, nts, ntq);
     }
 
     LEAVE("parse_declaration_specifiers");
@@ -1857,8 +1994,8 @@ external_declaration
 */
 static bool parse_external_declaration(PARSER *pars)
 {
+    TYPE *typ = new_unknown_type();
     STORAGE_CLASS sc = SC_DEFAULT;
-    TYPE_SPECIFIER ts = TS_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
     ENTER("parse_external_declaration");
@@ -1866,7 +2003,7 @@ static bool parse_external_declaration(PARSER *pars)
     assert(pars);
 
     if (is_declaration_specifiers(pars)) {
-        if (!parse_declaration_specifiers(pars, &sc, &ts, &tq))
+        if (!parse_declaration_specifiers(pars, true, false, &typ, &sc, &tq))
             return false;
     }
 
@@ -1892,7 +2029,7 @@ static bool parse_external_declaration(PARSER *pars)
     } else {
         for (;;) {
             if (is_declaration(pars)) {
-                if (!parse_declaration(pars))
+                if (!parse_declaration(pars, true))
                     return false;
             } else
                 break;
