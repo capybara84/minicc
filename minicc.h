@@ -94,6 +94,7 @@ typedef struct param {
 } PARAM;
 
 
+TYPE *new_type(TYPE_KIND kind);
 const char *get_type_string(const TYPE *typ);
 
 typedef enum {

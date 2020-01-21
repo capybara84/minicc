@@ -1,15 +1,5 @@
 #include "minicc.h"
 
-TYPE *new_unknown_type(void)
-{
-    TYPE *tp = (TYPE*) alloc(sizeof (TYPE));
-    tp->kind = T_UNKNOWN;
-    tp->is_const = false;
-    tp->type = NULL;
-    tp->param = NULL;
-    return tp;
-}
-
 NODE *new_node(NODE_KIND kind, const POS *pos)
 {
     NODE *np = (NODE*) alloc(sizeof (NODE));
@@ -1157,7 +1147,7 @@ declaration
 */
 static bool parse_declaration(PARSER *pars, bool parametered)
 {
-    TYPE *typ = new_unknown_type();
+    TYPE *typ = new_type(T_UNKNOWN);
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -1440,7 +1430,7 @@ parameter_declaration
 */
 static bool parse_parameter_declaration(PARSER *pars)
 {
-    TYPE *typ = new_unknown_type();
+    TYPE *typ = new_type(T_UNKNOWN);
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -2007,7 +1997,7 @@ external_declaration
 */
 static bool parse_external_declaration(PARSER *pars)
 {
-    TYPE *typ = new_unknown_type();
+    TYPE *typ = new_type(T_UNKNOWN);
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -2021,7 +2011,6 @@ static bool parse_external_declaration(PARSER *pars)
     }
 
     printf("TYPE:%s\n", get_type_string(typ));
-
 
     for (;;) {
         if (is_declarator(pars)) {
