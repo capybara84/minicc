@@ -113,8 +113,6 @@ static void parser_error(PARSER *pars, const char *s, ...)
     sprintf(buffer2, "'%s' at token '%s'", buffer, token_name);
 
     error(&pars->scan->pos, buffer2);
-
-    skip_error(pars);
 }
 
 static void parser_warning(PARSER *pars, const char *s, ...)
@@ -1456,10 +1454,9 @@ static bool parse_parameter_declaration(PARSER *pars, PARAM **param)
 
     if (!parse_declaration_specifiers(pars, false, true, &typ, &sc, &tq))
         return false;
-    if (sc != SC_DEFAULT && sc != SC_REGISTER)
+    if (sc != SC_DEFAULT && sc != SC_REGISTER) {
         parser_error(pars, "invalid storage class for parameter");
-    if (tq != TQ_DEFAULT && tq != TQ_CONST)
-        parser_error(pars, "invalid type qualifier for parameter");
+    }
     if (!parse_parameter_abstract_declarator(pars, &typ, &id))
         return false;
     *param = new_param(id, typ);
@@ -2006,14 +2003,14 @@ dup_warning:
 
 illegal_sc_on_file_scoped:
     parser_error(pars, "illegal storage class on file-scoped variable");
-    return false;
+    return true;
 invalid_in_func_decl:
     parser_error(pars,
         "invalid storage class specifier in function declarator");
-    return false;
+    return true;
 cannot_combine_decl_spec:
     parser_error(pars, "cannot combine declaration specifier");
-    return false;
+    return true;
 }
 
 /*
@@ -2031,7 +2028,7 @@ static bool parse_declaration_specifiers(PARSER *pars,
     if (!parse_declaration_specifier(pars, file_scoped, parametered,
                 *typ, psc, ptq))
         return false;
-    
+
     while (is_declaration_specifier(pars)) {
         if (!parse_declaration_specifier(pars, file_scoped, parametered,
                     *typ, psc, ptq))

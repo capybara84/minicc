@@ -1,9 +1,2 @@
-/* storage class */
 
-static unsigned short a;
-extern double b;
-
-foo() {}
-bar();
-
-
+void foo(volatile int x, const int y, volatile volatile const int z);
