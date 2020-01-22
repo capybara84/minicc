@@ -169,7 +169,7 @@ static void parser_error(PARSER *pars, const char *s, ...)
     va_end(ap);
 
     token_name = scan_token_to_string(pars->scan, pars->token);
-    sprintf(buffer2, "%s at token %s", buffer, token_name);
+    sprintf(buffer2, "'%s' at token '%s'", buffer, token_name);
 
     error(&pars->scan->pos, buffer2);
 

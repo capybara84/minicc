@@ -1,7 +1,6 @@
 foo()
 {
     goto end;
-    ;
 end:
     ;
 }
