@@ -17,6 +17,8 @@ scanner_test : test_scanner
 parser_test : test_parser
 	./test_parser test_parser1.c > test_parser1.output
 	-diff -c test_parser1.result test_parser1.output
+	-./test_parser test_parser2.c > test_parser2.output
+	-diff -c test_parser2.result test_parser2.output
 
 clean:
 	rm -f test_scanner test_parser *.o *.output
