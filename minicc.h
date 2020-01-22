@@ -76,7 +76,7 @@ typedef enum {
     T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
     T_STRUCT, T_UNION, T_ENUM, T_TYPEDEF_NAME,
-    T_POINTER, T_FUNC,
+    T_POINTER, T_ARRAY, T_FUNC,
     T_SIGNED, T_UNSIGNED,
 } TYPE_KIND;
 
@@ -94,7 +94,8 @@ typedef struct param {
 } PARAM;
 
 
-TYPE *new_type(TYPE_KIND kind);
+TYPE *new_type(TYPE_KIND kind, TYPE *typ);
+TYPE *dup_type(TYPE *typ);
 const char *get_type_string(const TYPE *typ);
 
 typedef enum {
@@ -141,6 +142,13 @@ typedef struct node {
     } u;
 } NODE;
 
+NODE *new_node(NODE_KIND kind, const POS *pos);
+NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np);
+NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right);
+NODE *new_node_num(NODE_KIND kind, const POS *pos, int num);
+NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id);
+NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
+void fprint_node(FILE *fp, const NODE *np);
 void print_node(const NODE *np);
 
 typedef struct {

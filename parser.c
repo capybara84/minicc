@@ -1,69 +1,5 @@
 #include "minicc.h"
 
-NODE *new_node(NODE_KIND kind, const POS *pos)
-{
-    NODE *np = (NODE*) alloc(sizeof (NODE));
-    np->kind = kind;
-    np->pos = *pos;
-    return np;
-}
-
-NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np)
-{
-    NODE *node = new_node(kind, pos);
-    node->u.link.left = np;
-    return node;
-}
-
-NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right)
-{
-    NODE *np = new_node(kind, pos);
-    np->u.link.left = left;
-    np->u.link.right = right;
-    return np;
-}
-
-NODE *new_node_num(NODE_KIND kind, const POS *pos, int num)
-{
-    NODE *np = new_node(kind, pos);
-    np->u.num = num;
-    return np;
-}
-
-NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id)
-{
-    NODE *np = new_node(kind, pos);
-    np->u.id = id;
-    return np;
-}
-
-NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
-{
-    NODE *np = new_node2(kind, pos, n, NULL);
-    NODE *p;
-    if (top == NULL)
-        return np;
-    for (p = top; p->u.link.right != NULL; p = p->u.link.right)
-        ;
-    p->u.link.right = np;
-    return top;
-}
-
-void fprint_node(FILE *fp, const NODE *np)
-{
-    if (np == NULL)
-        return;
-    switch (np->kind) {
-    case NK_EXTERNAL_DECL:
-        break;
-    }
-}
-
-void print_node(const NODE *np)
-{
-    fprint_node(stdout, np);
-}
-
 #define COUNT_OF(array) (sizeof (array) / sizeof (array[0]))
 
 #ifdef NDEBUG
@@ -85,6 +21,11 @@ const POS *get_pos(const PARSER *pars)
     return &pars->scan->pos;
 }
 
+char *get_id(PARSER *pars)
+{
+    assert(pars->token == TK_ID);
+    return pars->scan->id;
+}
 
 #ifdef NDEBUG
 #define next(pars)  ((pars)->token = next_token((pars)->scan))
@@ -1092,7 +1033,7 @@ static bool parse_initializer(PARSER *pars)
     return true;
 }
 
-static bool parse_declarator(PARSER *pars);
+static bool parse_declarator(PARSER *pars, TYPE **typ, char **id, PARAM **pl);
 
 /*
 init_declarator
@@ -1100,11 +1041,16 @@ init_declarator
 */
 static bool parse_init_declarator(PARSER *pars)
 {
+    TYPE *typ;
+    char *id = NULL;
+    PARAM *param_list = NULL;
+
     ENTER("parse_init_declarator");
 
     assert(pars);
 
-    if (!parse_declarator(pars))
+    typ = new_type(T_UNKNOWN, NULL);
+    if (!parse_declarator(pars, &typ, &id, &param_list))
         return false;
     if (is_token(pars, TK_ASSIGN)) {
         next(pars);
@@ -1147,7 +1093,7 @@ declaration
 */
 static bool parse_declaration(PARSER *pars, bool parametered)
 {
-    TYPE *typ = new_type(T_UNKNOWN);
+    TYPE *typ = new_type(T_UNKNOWN, NULL);
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -1191,18 +1137,24 @@ static bool parse_type_qualifier_list(PARSER *pars)
 pointer
 	= '*' type_qualifier_list {'*' type_qualifier_list}
 */
-static bool parse_pointer(PARSER *pars)
+static bool parse_pointer(PARSER *pars, TYPE **pptyp)
 {
     ENTER("parse_pointer");
 
     assert(pars);
+    assert(pptyp);
+    assert(*pptyp);
 
     next(pars); /* skip '*' */
 
+    *pptyp = new_type(T_POINTER, *pptyp);
+
+    /*TODO*/
     if (!parse_type_qualifier_list(pars))
         return false;
     while (is_token(pars, TK_STAR)) {
         next(pars);
+        *pptyp = new_type(T_POINTER, *pptyp);
         if (!parse_type_qualifier_list(pars))
             return false;
     }
@@ -1299,7 +1251,7 @@ static bool parse_specifier_qualifier_list(PARSER *pars)
 }
 
 
-static bool parse_parameter_type_list(PARSER *pars);
+static bool parse_parameter_type_list(PARSER *pars, PARAM **pl);
 
 /*
 abstract_declarator
@@ -1314,7 +1266,7 @@ static bool parse_abstract_declarator(PARSER *pars)
     assert(pars);
 
     if (is_token(pars, TK_STAR)) {
-        if (!parse_pointer(pars))
+        if (!parse_pointer(pars, NULL))/*TODO*/
             return false;
         if (!is_token(pars, TK_LPAR))
             goto done;
@@ -1337,7 +1289,7 @@ static bool parse_abstract_declarator(PARSER *pars)
         } else if (is_token(pars, TK_LPAR)) {
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars))
+                if (!parse_parameter_type_list(pars, NULL))/*TODO*/
                     return false;
             }
             if (!expect(pars, TK_RPAR))
@@ -1384,7 +1336,7 @@ static bool parse_parameter_abstract_declarator(PARSER *pars)
     assert(pars);
 
     if (is_token(pars, TK_STAR)) {
-        if (!parse_pointer(pars))
+        if (!parse_pointer(pars, NULL))/*TODO*/
             return false;
     }
     if (is_token(pars, TK_ID)) {
@@ -1408,7 +1360,7 @@ static bool parse_parameter_abstract_declarator(PARSER *pars)
         } else if (is_token(pars, TK_LPAR)) {
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars))
+                if (!parse_parameter_type_list(pars, NULL))/*TODO*/
                     return false;
             } else if (is_token(pars, TK_ID)) {
                 if (!parse_identifier_list(pars))
@@ -1430,7 +1382,7 @@ parameter_declaration
 */
 static bool parse_parameter_declaration(PARSER *pars)
 {
-    TYPE *typ = new_type(T_UNKNOWN);
+    TYPE *typ = new_type(T_UNKNOWN, NULL);
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -1449,7 +1401,7 @@ static bool parse_parameter_declaration(PARSER *pars)
 parameter_list
 	= parameter_declaration {',' parameter_declaration}
 */
-static bool parse_parameter_list(PARSER *pars)
+static bool parse_parameter_list(PARSER *pars, PARAM **param_list)
 {
     ENTER("parse_parameter_list");
 
@@ -1470,12 +1422,12 @@ static bool parse_parameter_list(PARSER *pars)
 parameter_type_list
     = parameter_list [',' '...']
 */
-static bool parse_parameter_type_list(PARSER *pars)
+static bool parse_parameter_type_list(PARSER *pars, PARAM **param_list)
 {
     ENTER("parse_parameter_type_list");
     assert(pars);
 
-    if (!parse_parameter_list(pars))
+    if (!parse_parameter_list(pars, param_list))
         return false;
     if (is_token(pars, TK_COMMA)) {
         next(pars);
@@ -1494,24 +1446,33 @@ declarator
                     | '(' parameter_type_list ')'
                     | '(' [identifier_list] ')' }
 */
-static bool parse_declarator(PARSER *pars)
+static bool
+parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
 {
+    TYPE *typ = NULL;
     ENTER("parse_declarator");
 
     assert(pars);
+    assert(pptyp);
+    assert(*pptyp);
+    assert(id);
+    assert(param_list);
 
     if (is_token(pars, TK_STAR)) {
-        if (!parse_pointer(pars))
+        if (!parse_pointer(pars, pptyp))
             return false;
     }
     if (is_token(pars, TK_ID)) {
+        *id = get_id(pars);
         next(pars);
     } else if (is_token(pars, TK_LPAR)) {
         next(pars);
-        if (!parse_declarator(pars))
+        typ = new_type(T_UNKNOWN, NULL);
+        if (!parse_declarator(pars, &typ, id, param_list))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
+        /* TODO id, param_list */
     } else {
         parser_error(pars, "need IDENTIFIER or '('");
         return false;
@@ -1526,17 +1487,34 @@ static bool parse_declarator(PARSER *pars)
             }
             if (!expect(pars,TK_RBRA))
                 return false;
+            *pptyp = new_type(T_ARRAY, *pptyp);
+            /*TODO size*/
         } else if (is_token(pars, TK_LPAR)) {
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars))
+                if (!parse_parameter_type_list(pars, param_list))
                     return false;
             } else if (is_token(pars, TK_ID)) {
+                /*TODO*/
                 if (!parse_identifier_list(pars))
                     return false;
             }
             if (!expect(pars, TK_RPAR))
                 return false;
+            *pptyp = new_type(T_FUNC, *pptyp);
+            /*TODO param_list */
+            /*(*pptyp)->param = *param_list;*/
+            if (typ) {
+                TYPE *p = typ;
+                while (p && p->type && p->type->kind != T_UNKNOWN)
+                    p = p->type;
+                if (p->type == NULL || p->type->kind != T_UNKNOWN) {
+                    parser_error(pars, "type syntax error");
+                } else {
+                    p->type = *pptyp;
+                    *pptyp = typ;
+                }
+            }
         } else
             break;
     }
@@ -1551,6 +1529,10 @@ struct_declarator
 */
 static bool parse_struct_declarator(PARSER *pars)
 {
+    TYPE *typ;
+    char *id;
+    PARAM *param_list;
+
     ENTER("parse_struct_declarator");
     assert(pars);
 
@@ -1559,7 +1541,10 @@ static bool parse_struct_declarator(PARSER *pars)
         if (!parse_constant_expression(pars))
             return false;
     } else {
-        if (!parse_declarator(pars))
+        typ = new_type(T_UNKNOWN, NULL);
+        id = NULL;
+        param_list = NULL;
+        if (!parse_declarator(pars, &typ, &id, &param_list))
             return false;
         if (is_token(pars, TK_COLON)) {
             next(pars);
@@ -1997,7 +1982,7 @@ external_declaration
 */
 static bool parse_external_declaration(PARSER *pars)
 {
-    TYPE *typ = new_type(T_UNKNOWN);
+    TYPE *typ;
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
 
@@ -2005,17 +1990,31 @@ static bool parse_external_declaration(PARSER *pars)
 
     assert(pars);
 
+    typ = new_type(T_UNKNOWN, NULL);
+
     if (is_declaration_specifiers(pars)) {
         if (!parse_declaration_specifiers(pars, true, false, &typ, &sc, &tq))
             return false;
+        if (typ->kind == T_SIGNED)
+            typ->kind = T_INT;
+        else if (typ->kind == T_UNSIGNED)
+            typ->kind = T_UINT;
+    }
+    if (typ->kind == T_UNKNOWN) {
+        parser_warning(pars, "type specifier missing, defaults to 'int'");
+        typ->kind = T_INT;
     }
 
-    printf("TYPE:%s\n", get_type_string(typ));
-
     for (;;) {
+        TYPE *ntyp = dup_type(typ);
+        char *id = NULL;
+        PARAM *param_list = NULL;
+
         if (is_declarator(pars)) {
-            if (!parse_declarator(pars))
+            if (!parse_declarator(pars, &ntyp, &id, &param_list))
                 return false;
+
+printf("id: %s, type: %s\n", id, get_type_string(ntyp));
 
             if (is_token(pars, TK_ASSIGN)) {
                 next(pars);
