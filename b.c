@@ -6,3 +6,4 @@ extern double b;
 foo() {}
 bar();
 
+

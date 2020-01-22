@@ -945,7 +945,7 @@ static bool parse_statement(PARSER *pars)
         /*THROUGH*/
     default:
         TRACE("parse_statement", "expression");
-        if (pars->token != TK_SEMI) {
+        if (!is_token(pars, TK_SEMI)) {
             if (!parse_expression(pars))
                 return false;
         }
@@ -1122,11 +1122,20 @@ type_qualifier_list
 type_qualifier
 	= CONST | VOLATILE
 */
-static bool parse_type_qualifier_list(PARSER *pars)
+static bool
+parse_type_qualifier_list(PARSER *pars, TYPE *typ, TYPE_QUALIFIER *ptq)
 {
     ENTER("parse_type_qualifier_list");
     assert(pars);
+    assert(typ);
+    assert(ptq);
     while (is_token(pars, TK_CONST) || is_token(pars, TK_VOLATILE)) {
+        if (is_token(pars, TK_CONST)) {
+            *ptq = TQ_CONST;
+            typ->is_const = true;
+        } else {
+            *ptq = TQ_VOLATILE;
+        }
         next(pars);
     }
     LEAVE("parse_type_qualifier_list");
@@ -1139,6 +1148,8 @@ pointer
 */
 static bool parse_pointer(PARSER *pars, TYPE **pptyp)
 {
+    TYPE_QUALIFIER tq = TQ_DEFAULT;
+
     ENTER("parse_pointer");
 
     assert(pars);
@@ -1149,13 +1160,12 @@ static bool parse_pointer(PARSER *pars, TYPE **pptyp)
 
     *pptyp = new_type(T_POINTER, *pptyp);
 
-    /*TODO*/
-    if (!parse_type_qualifier_list(pars))
+    if (!parse_type_qualifier_list(pars, *pptyp, &tq))
         return false;
     while (is_token(pars, TK_STAR)) {
         next(pars);
         *pptyp = new_type(T_POINTER, *pptyp);
-        if (!parse_type_qualifier_list(pars))
+        if (!parse_type_qualifier_list(pars, *pptyp, &tq))
             return false;
     }
 
@@ -1260,20 +1270,28 @@ abstract_declarator
                 { '[' [constant_expression] ']'
                     | '(' [parameter_type_list] ')' }
 */
-static bool parse_abstract_declarator(PARSER *pars)
+static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
+                char **id, PARAM **param_list)
 {
+    TYPE *typ = NULL;
     ENTER("parse_abstract_declarator");
+
     assert(pars);
+    assert(pptyp);
+    assert(*pptyp);
+    assert(id);
+    assert(param_list);
 
     if (is_token(pars, TK_STAR)) {
-        if (!parse_pointer(pars, NULL))/*TODO*/
+        if (!parse_pointer(pars, pptyp))
             return false;
         if (!is_token(pars, TK_LPAR))
             goto done;
     } 
     if (!expect(pars, TK_LPAR))
         return false;
-    if (!parse_abstract_declarator(pars))
+    typ = new_type(T_UNKNOWN, NULL);
+    if (!parse_abstract_declarator(pars, &typ, id, param_list))
         return false;
     if (!expect(pars, TK_RPAR))
         return false;
@@ -1286,16 +1304,31 @@ static bool parse_abstract_declarator(PARSER *pars)
             }
             if (!expect(pars,TK_RBRA))
                 return false;
+            *pptyp = new_type(T_ARRAY, *pptyp);
+            /*TODO size*/
         } else if (is_token(pars, TK_LPAR)) {
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars, NULL))/*TODO*/
+                if (!parse_parameter_type_list(pars, param_list))
                     return false;
             }
             if (!expect(pars, TK_RPAR))
                 return false;
+            *pptyp = new_type(T_FUNC, *pptyp);
+            (*pptyp)->param = *param_list;
         } else
             break;
+        if (typ) {
+            TYPE *p = typ;
+            while (p && p->type && p->type->kind != T_UNKNOWN)
+                p = p->type;
+            if (p->type == NULL || p->type->kind != T_UNKNOWN) {
+                parser_error(pars, "type syntax error");
+            } else {
+                p->type = *pptyp;
+                *pptyp = typ;
+            }
+        }
     }
 done:
     LEAVE("parse_abstract_declarator");
@@ -1308,13 +1341,17 @@ type_name
 */
 static bool parse_type_name(PARSER *pars)
 {
+    TYPE *typ;
+    char *id = NULL;
+    PARAM *param_list = NULL;
     ENTER("parse_type_name");
     assert(pars);
 
     if (!parse_specifier_qualifier_list(pars))
         return false;
     if (is_abstract_declarator(pars)) {
-        if (!parse_abstract_declarator(pars))
+        typ = new_type(T_UNKNOWN, NULL);
+        if (!parse_abstract_declarator(pars, &typ, &id, &param_list))
             return false;
     }
     LEAVE("parse_type_name");
@@ -1329,21 +1366,29 @@ parameter_abstract_declarator
                     | '(' [parameter_type_list] ')'
                     | '(' identifier_list ')' }}
 */
-static bool parse_parameter_abstract_declarator(PARSER *pars)
+static bool parse_parameter_abstract_declarator(PARSER *pars,
+                TYPE **pptyp, char **id)
 {
+    TYPE *typ = NULL;
+    PARAM *param_list = NULL;
     ENTER("parse_parameter_abstract_declarator");
 
     assert(pars);
+    assert(pptyp);
+    assert(*pptyp);
+    assert(id);
 
     if (is_token(pars, TK_STAR)) {
-        if (!parse_pointer(pars, NULL))/*TODO*/
+        if (!parse_pointer(pars, pptyp))
             return false;
     }
     if (is_token(pars, TK_ID)) {
+        *id = get_id(pars);
         next(pars);
     } else if (is_token(pars, TK_LPAR)) {
         next(pars);
-        if (!parse_parameter_abstract_declarator(pars))
+        typ = new_type(T_UNKNOWN, NULL);
+        if (!parse_parameter_abstract_declarator(pars, &typ, id))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
@@ -1357,19 +1402,34 @@ static bool parse_parameter_abstract_declarator(PARSER *pars)
             }
             if (!expect(pars,TK_RBRA))
                 return false;
+            *pptyp = new_type(T_ARRAY, *pptyp);
+            /*TODO size*/
         } else if (is_token(pars, TK_LPAR)) {
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars, NULL))/*TODO*/
+                if (!parse_parameter_type_list(pars, &param_list))
                     return false;
             } else if (is_token(pars, TK_ID)) {
-                if (!parse_identifier_list(pars))
+                if (!parse_identifier_list(pars))   /*TODO*/
                     return false;
             }
             if (!expect(pars, TK_RPAR))
                 return false;
+            *pptyp = new_type(T_FUNC, *pptyp);
+            (*pptyp)->param = param_list;
         } else
             break;
+        if (typ) {
+            TYPE *p = typ;
+            while (p && p->type && p->type->kind != T_UNKNOWN)
+                p = p->type;
+            if (p->type == NULL || p->type->kind != T_UNKNOWN) {
+                parser_error(pars, "type syntax error");
+            } else {
+                p->type = *pptyp;
+                *pptyp = typ;
+            }
+        }
     }
 
     LEAVE("parse_parameter_abstract_declarator");
@@ -1380,59 +1440,63 @@ static bool parse_parameter_abstract_declarator(PARSER *pars)
 parameter_declaration
 	= declaration_specifiers parameter_abstract_declarator
 */
-static bool parse_parameter_declaration(PARSER *pars)
+static bool parse_parameter_declaration(PARSER *pars, PARAM **param)
 {
-    TYPE *typ = new_type(T_UNKNOWN, NULL);
+    TYPE *typ;
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
+    char *id = NULL;
 
     ENTER("parse_parameter_declaration");
+
     assert(pars);
+    assert(param);
+
+    typ = new_type(T_UNKNOWN, NULL);
 
     if (!parse_declaration_specifiers(pars, false, true, &typ, &sc, &tq))
         return false;
-    if (!parse_parameter_abstract_declarator(pars))
+    if (sc != SC_DEFAULT && sc != SC_REGISTER)
+        parser_error(pars, "invalid storage class for parameter");
+    if (tq != TQ_DEFAULT && tq != TQ_CONST)
+        parser_error(pars, "invalid type qualifier for parameter");
+    if (!parse_parameter_abstract_declarator(pars, &typ, &id))
         return false;
+    *param = new_param(id, typ);
+    (*param)->is_register = (sc == SC_REGISTER);
     LEAVE("parse_parameter_declaration");
-    return true;
-}
-
-/*
-parameter_list
-	= parameter_declaration {',' parameter_declaration}
-*/
-static bool parse_parameter_list(PARSER *pars, PARAM **param_list)
-{
-    ENTER("parse_parameter_list");
-
-    assert(pars);
-
-    if (!parse_parameter_declaration(pars))
-        return false;
-    while (is_token(pars, TK_COMMA)) {
-        next(pars);
-        if (!parse_parameter_declaration(pars))
-            return false;
-    }
-    LEAVE("parse_parameter_list");
     return true;
 }
 
 /*
 parameter_type_list
     = parameter_list [',' '...']
+parameter_list
+	= parameter_declaration {',' parameter_declaration}
 */
 static bool parse_parameter_type_list(PARSER *pars, PARAM **param_list)
 {
-    ENTER("parse_parameter_type_list");
-    assert(pars);
+    PARAM *param;
 
-    if (!parse_parameter_list(pars, param_list))
+    ENTER("parse_parameter_type_list");
+
+    assert(pars);
+    assert(param_list);
+
+    if (!parse_parameter_declaration(pars, &param))
         return false;
-    if (is_token(pars, TK_COMMA)) {
+    *param_list = param;
+    while (is_token(pars, TK_COMMA)) {
         next(pars);
-        if (!expect(pars, TK_ELLIPSIS))
+        if (is_token(pars, TK_ELLIPSIS)) {
+            next(pars);
+            param = new_param(NULL, NULL);
+            add_param(*param_list, param);
+            break;
+        }
+        if (!parse_parameter_declaration(pars, &param))
             return false;
+        add_param(*param_list, param);
     }
 
     LEAVE("parse_parameter_type_list");
@@ -1502,21 +1566,20 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
             if (!expect(pars, TK_RPAR))
                 return false;
             *pptyp = new_type(T_FUNC, *pptyp);
-            /*TODO param_list */
-            /*(*pptyp)->param = *param_list;*/
-            if (typ) {
-                TYPE *p = typ;
-                while (p && p->type && p->type->kind != T_UNKNOWN)
-                    p = p->type;
-                if (p->type == NULL || p->type->kind != T_UNKNOWN) {
-                    parser_error(pars, "type syntax error");
-                } else {
-                    p->type = *pptyp;
-                    *pptyp = typ;
-                }
-            }
+            (*pptyp)->param = *param_list;
         } else
             break;
+        if (typ) {
+            TYPE *p = typ;
+            while (p && p->type && p->type->kind != T_UNKNOWN)
+                p = p->type;
+            if (p->type == NULL || p->type->kind != T_UNKNOWN) {
+                parser_error(pars, "type syntax error");
+            } else {
+                p->type = *pptyp;
+                *pptyp = typ;
+            }
+        }
     }
     LEAVE("parse_declarator");
     return true;
@@ -1896,7 +1959,7 @@ static bool parse_declaration_specifier(PARSER *pars,
     case TK_UNION:
         if (typ->kind != T_UNKNOWN)
             combine_error = true;
-        typ->kind = (pars->token == TK_STRUCT) ? T_STRUCT : T_UNION;
+        typ->kind = is_token(pars, TK_STRUCT) ? T_STRUCT : T_UNION;
         /*TODO*/
         if (!parse_struct_or_union_specifier(pars))
             return false;
@@ -1915,14 +1978,19 @@ static bool parse_declaration_specifier(PARSER *pars,
         break;
     case TK_CONST:
         next(pars);
+        /*
         if (*ptq != TQ_DEFAULT)
             goto cannot_combine_decl_spec;
+        */
         *ptq = TQ_CONST;
+        typ->is_const = true;
         break;
     case TK_VOLATILE:
         next(pars);
+        /*
         if (*ptq != TQ_DEFAULT)
             goto cannot_combine_decl_spec;
+        */
         *ptq = TQ_VOLATILE;
         break;
     default:
@@ -2014,7 +2082,9 @@ static bool parse_external_declaration(PARSER *pars)
             if (!parse_declarator(pars, &ntyp, &id, &param_list))
                 return false;
 
-printf("id: %s, type: %s\n", id, get_type_string(ntyp));
+printf("id: %s, type: ", id);
+print_type(ntyp);
+printf("\n");
 
             if (is_token(pars, TK_ASSIGN)) {
                 next(pars);

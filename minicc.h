@@ -85,18 +85,24 @@ typedef struct type {
     bool is_const;
     struct type *type;
     struct param *param;
+    char *tag;
 } TYPE;
 
 typedef struct param {
     struct param *next;
     char *id;
     TYPE *type;
+    bool is_register;
 } PARAM;
 
+PARAM *new_param(char *id, TYPE *typ);
+void add_param(PARAM *top, PARAM *param);
 
 TYPE *new_type(TYPE_KIND kind, TYPE *typ);
 TYPE *dup_type(TYPE *typ);
 const char *get_type_string(const TYPE *typ);
+void fprint_type(FILE *fp, const TYPE *typ);
+void print_type(const TYPE *typ);
 
 typedef enum {
     SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN, SC_TYPEDEF,
