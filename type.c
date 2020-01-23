@@ -109,9 +109,13 @@ void fprint_param(FILE *fp, const PARAM *p)
 {
     if (p->is_register)
         fprintf(fp, "register ");
-    fprint_type(fp, p->type);
-    if (p->id)
-        fprintf(fp, " %s", p->id);
+    if (p->type == NULL)
+        fprintf(fp, " ...");
+    else {
+        fprint_type(fp, p->type);
+        if (p->id)
+            fprintf(fp, " %s", p->id);
+    }
 }
 
 void fprint_type(FILE *fp, const TYPE *typ)

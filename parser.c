@@ -1048,7 +1048,7 @@ static bool parse_initializer(PARSER *pars)
     return true;
 }
 
-static bool parse_declarator(PARSER *pars, TYPE **typ, char **id, PARAM **pl);
+static bool parse_declarator(PARSER *pars, TYPE **typ, char **id);
 
 /*
 init_declarator
@@ -1058,14 +1058,13 @@ static bool parse_init_declarator(PARSER *pars)
 {
     TYPE *typ;
     char *id = NULL;
-    PARAM *param_list = NULL;
 
     ENTER("parse_init_declarator");
 
     assert(pars);
 
     typ = new_type(T_UNKNOWN, NULL);
-    if (!parse_declarator(pars, &typ, &id, &param_list))
+    if (!parse_declarator(pars, &typ, &id))
         return false;
     if (is_token(pars, TK_ASSIGN)) {
         next(pars);
@@ -1525,7 +1524,7 @@ declarator
                     | '(' [identifier_list] ')' }
 */
 static bool
-parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
+parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
 {
     TYPE *typ = NULL;
     ENTER("parse_declarator");
@@ -1534,7 +1533,6 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
     assert(pptyp);
     assert(*pptyp);
     assert(id);
-    assert(param_list);
 
     if (is_token(pars, TK_STAR)) {
         if (!parse_pointer(pars, pptyp))
@@ -1546,7 +1544,7 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
     } else if (is_token(pars, TK_LPAR)) {
         next(pars);
         typ = new_type(T_UNKNOWN, NULL);
-        if (!parse_declarator(pars, &typ, id, param_list))
+        if (!parse_declarator(pars, &typ, id))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
@@ -1568,9 +1566,10 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
             *pptyp = new_type(T_ARRAY, *pptyp);
             /*TODO size*/
         } else if (is_token(pars, TK_LPAR)) {
+            PARAM *param = NULL;
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars, param_list))
+                if (!parse_parameter_type_list(pars, &param))
                     return false;
             } else if (is_token(pars, TK_ID)) {
                 /*TODO*/
@@ -1580,7 +1579,7 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id, PARAM **param_list)
             if (!expect(pars, TK_RPAR))
                 return false;
             *pptyp = new_type(T_FUNC, *pptyp);
-            (*pptyp)->param = *param_list;
+            (*pptyp)->param = param;
         } else
             break;
         if (typ) {
@@ -1608,7 +1607,6 @@ static bool parse_struct_declarator(PARSER *pars)
 {
     TYPE *typ;
     char *id;
-    PARAM *param_list;
 
     ENTER("parse_struct_declarator");
     assert(pars);
@@ -1620,8 +1618,7 @@ static bool parse_struct_declarator(PARSER *pars)
     } else {
         typ = new_type(T_UNKNOWN, NULL);
         id = NULL;
-        param_list = NULL;
-        if (!parse_declarator(pars, &typ, &id, &param_list))
+        if (!parse_declarator(pars, &typ, &id))
             return false;
         if (is_token(pars, TK_COLON)) {
             next(pars);
@@ -2092,10 +2089,9 @@ static bool parse_external_declaration(PARSER *pars)
     for (;;) {
         TYPE *ntyp = dup_type(typ);
         char *id = NULL;
-        PARAM *param_list = NULL;
 
         if (is_declarator(pars)) {
-            if (!parse_declarator(pars, &ntyp, &id, &param_list))
+            if (!parse_declarator(pars, &ntyp, &id))
                 return false;
             count++;
             sym = lookup_symbol(id);
@@ -2129,6 +2125,8 @@ static bool parse_external_declaration(PARSER *pars)
         if (count == 0)
             parser_warning(pars, "empty declaration");
     } else {
+        PARAM *p;
+
         if (count != 1)
             parser_error(pars, "declaration syntax error");
         assert(sym);
@@ -2145,9 +2143,9 @@ static bool parse_external_declaration(PARSER *pars)
         if (sym->has_body) error
         */
         enter_function(sym);
-        /*
-        regist param
-        */
+        for (p = sym->type->param; p != NULL; p = p->next) {
+            SYMBOL *psym = new_symbol(SK_PARAM, sc, tq, p->id, p->type);
+        }
         if (!parse_compound_statement(pars))
             return false;
         leave_function();
