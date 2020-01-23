@@ -36,6 +36,7 @@ SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, const char *id,
     current_symtab->sym = p;
     p->sclass = sc;
     p->kind = kind;
+    p->is_volatile = false;
     p->id = id;
     p->type = type;
     p->tab = NULL;

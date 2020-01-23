@@ -2098,9 +2098,6 @@ static bool parse_external_declaration(PARSER *pars)
             if (!parse_declarator(pars, &ntyp, &id, &param_list))
                 return false;
             count++;
-printf("id: %s, type: ", id);
-print_type(ntyp);
-printf("\n");
             sym = lookup_symbol(id);
             if (sym) {
                 if (sym->kind == SK_FUNC && ntyp->kind == T_FUNC) {
@@ -2133,7 +2130,7 @@ printf("\n");
             parser_warning(pars, "empty declaration");
     } else {
         if (count != 1)
-            parser_error(pars, "syntax error");
+            parser_error(pars, "declaration syntax error");
         assert(sym);
         if (sym->kind != SK_FUNC)
             parser_error(pars, "invalid function syntax");
