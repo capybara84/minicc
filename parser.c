@@ -2109,7 +2109,7 @@ static bool parse_external_declaration(PARSER *pars)
                     parser_error(pars, "'%s' duplicated", id);/*TODO*/
             } else {
                 sym = new_symbol((ntyp->kind == T_FUNC) ? SK_FUNC : SK_GLOBAL,
-                                    sc, id, ntyp);
+                                    sc, tq, id, ntyp);
             }
 
             if (is_token(pars, TK_ASSIGN)) {

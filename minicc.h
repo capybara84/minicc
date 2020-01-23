@@ -129,12 +129,13 @@ typedef struct symbol {
 } SYMBOL;
 
 typedef struct symtab {
-    SYMBOL *sym;
+    SYMBOL *head;
+    SYMBOL *tail;
     struct symtab *up;
 } SYMTAB;
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, const char *id,
-                    TYPE *type);
+SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
+                    const char *id, TYPE *type);
 SYMBOL *lookup_symbol(const char *id);
 
 bool init_symtab(void);

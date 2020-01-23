@@ -7,7 +7,7 @@ static SYMBOL *current_function = NULL;
 SYMTAB *new_symtab(SYMTAB *up)
 {
     SYMTAB *tab = (SYMTAB*) alloc(sizeof (SYMTAB));
-    tab->sym = NULL;
+    tab->head = tab->tail = NULL;
     tab->up = up;
     return tab;
 }
@@ -25,18 +25,24 @@ void term_symtab(void)
 }
 
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, const char *id,
-                    TYPE *type)
+SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
+                    const char *id, TYPE *type)
 {
     SYMBOL *p;
 
     assert(current_symtab);
     p = (SYMBOL*) alloc(sizeof (SYMBOL));
-    p->next = current_symtab->sym;
-    current_symtab->sym = p;
+    p->next = NULL;
+    if (current_symtab->tail == NULL) {
+        assert(current_symtab->head == NULL);
+        current_symtab->head = current_symtab->tail = p;
+    } else {
+        current_symtab->tail->next = p;
+        current_symtab->tail = p;
+    }
     p->sclass = sc;
     p->kind = kind;
-    p->is_volatile = false;
+    p->is_volatile = (tq == TQ_VOLATILE);
     p->id = id;
     p->type = type;
     p->tab = NULL;
@@ -49,7 +55,7 @@ SYMBOL *lookup_symbol(const char *id)
     SYMBOL *sym;
 
     for (tab = current_symtab; tab != NULL; tab = tab->up) {
-        for (sym = tab->sym; sym != NULL; sym = sym->next) {
+        for (sym = tab->head; sym != NULL; sym = sym->next) {
             if (sym->id == id)
                 return sym;
         }
@@ -126,7 +132,7 @@ void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab)
     const SYMBOL *sym;
     if (tab == NULL)
         return;
-    for (sym = tab->sym; sym != NULL; sym = sym->next) {
+    for (sym = tab->head; sym != NULL; sym = sym->next) {
         fprint_symbol(fp, indent, sym);
     }
 }
