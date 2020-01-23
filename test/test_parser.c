@@ -12,6 +12,8 @@ static bool test(const char *filename)
     }
     result = parse(pars);
     close_parser(pars);
+
+    print_global_symtab();
     return result;
 }
 

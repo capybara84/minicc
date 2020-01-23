@@ -81,10 +81,35 @@ void leave_function(void)
     current_function = NULL;
 }
 
+const char *get_sym_kind_string(SYMBOL_KIND kind)
+{
+    switch (kind) {
+    case SK_LOCAL:      return "LOCAL";
+    case SK_GLOBAL:     return "GLOBAL";
+    case SK_PARAM:      return "PARAM";
+    case SK_FUNC:       return "FUNC";
+    }
+    return NULL;
+}
+
+const char *get_sclass_string(STORAGE_CLASS sc)
+{
+    switch (sc) {
+    case SC_DEFAULT:    return "DEFAULT";
+    case SC_AUTO:       return "AUTO";
+    case SC_REGISTER:   return "REGISTER";
+    case SC_STATIC:     return "STATIC";
+    case SC_EXTERN:     return "EXTERN";
+    case SC_TYPEDEF:    return "TYPEDEF";
+    }
+    return NULL;
+}
+
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
 {
     fprintf(fp, "%*sSYM %s %s %s%s:", indent, "",
-        sym->id, get_sym_kind_string(sym->kind), get_sclass_string(sym->sclass),
+        sym->id, get_sym_kind_string(sym->kind),
+                get_sclass_string(sym->sclass),
         (sym->is_volatile) ? " volatile" : "");
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
@@ -112,5 +137,6 @@ void print_symtab(const SYMTAB *tab)
 
 void print_global_symtab(void)
 {
+    printf("GLOBAL SYMTAB\n");
     print_symtab(global_symtab);
 }

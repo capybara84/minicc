@@ -143,6 +143,10 @@ SYMTAB *enter_scope(void);
 void leave_scope(void);
 void enter_function(SYMBOL *sym);
 void leave_function(void);
+void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym);
+void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab);
+void print_symtab(const SYMTAB *tab);
+void print_global_symtab(void);
 
 typedef enum {
     NK_EXTERNAL_DECL,

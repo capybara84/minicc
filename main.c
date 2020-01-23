@@ -11,6 +11,8 @@ static bool compile(const char *filename)
         return false;
     }
     result = parse(pars);
+
+    print_global_symtab();
     close_parser(pars);
     return result;
 }
