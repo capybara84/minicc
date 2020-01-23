@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
         usage();
+    init_symtab();
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (argv[i][1] == 'd') {
@@ -49,5 +50,6 @@ int main(int argc, char *argv[])
         } else if (!test(argv[i]))
             result = 1;
     }
+    term_symtab();
     return result;
 }

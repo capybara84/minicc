@@ -100,6 +100,8 @@ void add_param(PARAM *top, PARAM *param);
 
 TYPE *new_type(TYPE_KIND kind, TYPE *typ);
 TYPE *dup_type(TYPE *typ);
+bool equal_type(const TYPE *tl, const TYPE *tr);
+
 const char *get_type_string(const TYPE *typ);
 void fprint_type(FILE *fp, const TYPE *typ);
 void print_type(const TYPE *typ);
@@ -130,6 +132,17 @@ typedef struct symtab {
     SYMBOL *sym;
     struct symtab *up;
 } SYMTAB;
+
+SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, const char *id,
+                    TYPE *type);
+SYMBOL *lookup_symbol(const char *id);
+
+bool init_symtab(void);
+void term_symtab(void);
+SYMTAB *enter_scope(void);
+void leave_scope(void);
+void enter_function(SYMBOL *sym);
+void leave_function(void);
 
 typedef enum {
     NK_EXTERNAL_DECL,

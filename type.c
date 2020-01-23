@@ -41,6 +41,39 @@ TYPE *dup_type(TYPE *typ)
     return tp;
 }
 
+bool equal_type(const TYPE *tl, const TYPE *tr)
+{
+    PARAM *pl;
+    PARAM *pr;
+
+    if (tl == NULL && tr == NULL)
+        return true;
+    if (tl == NULL || tr == NULL)
+        return false;
+    if (tl->kind != tr->kind)
+        return false;
+    if (tl->is_const != tr->is_const)
+        return false;
+    if (tl->tag != tr->tag)
+        return false;
+    if (!equal_type(tl->type, tr->type))
+        return false;
+    pl = tl->param;
+    pr = tr->param;
+    while (pl != NULL && pr != NULL) {
+        if (!equal_type(pl->type, pr->type))
+            return false;
+        if (pl->is_register != pr->is_register)
+            return false;
+        pl = pl->next;
+        pr = pr->next;
+    }
+    if (pl != NULL || pr != NULL)
+        return false;
+    return true;
+}
+
+
 const char *get_type_string(const TYPE *typ)
 {
     if (typ == NULL)

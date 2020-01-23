@@ -18,11 +18,15 @@ static int s_indent = 0;
 
 const POS *get_pos(const PARSER *pars)
 {
+    assert(pars);
+    assert(pars->scan);
     return &pars->scan->pos;
 }
 
 char *get_id(PARSER *pars)
 {
+    assert(pars);
+    assert(pars->scan);
     assert(pars->token == TK_ID);
     return pars->scan->id;
 }
@@ -86,12 +90,32 @@ static bool is_token(PARSER *pars, TOKEN tok)
     return false;
 }
 
-static void skip_error(PARSER *pars)
+static bool is_token_with_array(PARSER *pars, TOKEN tokens[], int count)
+{
+    TOKEN token;
+    int i;
+
+    assert(pars);
+    token = pars->token;
+
+    for (i = 0; i < count; i++)
+        if (token == tokens[i])
+            return true;
+    return false;
+}
+
+static void skip_error_to(PARSER *pars, TOKEN tokens[], int count)
 {
     assert(pars);
 
-    while (!is_token(pars, TK_SEMI) && !is_token(pars, TK_EOF))
+    while (!is_token_with_array(pars, tokens, count))
         next(pars);
+}
+
+static void skip_error_semi(PARSER *pars)
+{
+    static TOKEN tokens[] = { TK_SEMI, TK_EOF };
+    skip_error_to(pars, tokens, COUNT_OF(tokens));
 }
 
 static void parser_error(PARSER *pars, const char *s, ...)
@@ -110,7 +134,7 @@ static void parser_error(PARSER *pars, const char *s, ...)
     va_end(ap);
 
     token_name = scan_token_to_string(pars->scan, pars->token);
-    sprintf(buffer2, "'%s' at token '%s'", buffer, token_name);
+    sprintf(buffer2, "%s at token '%s'", buffer, token_name);
 
     error(&pars->scan->pos, buffer2);
 }
@@ -122,20 +146,6 @@ static void parser_warning(PARSER *pars, const char *s, ...)
     va_start(ap, s);
     vwarning(&pars->scan->pos, s, ap);
     va_end(ap);
-}
-
-static bool is_token_with_array(PARSER *pars, TOKEN begin_with[], int count)
-{
-    TOKEN token;
-    int i;
-
-    assert(pars);
-    token = pars->token;
-
-    for (i = 0; i < count; i++)
-        if (token == begin_with[i])
-            return true;
-    return false;
 }
 
 static bool expect(PARSER *pars, TOKEN tok)
@@ -800,144 +810,147 @@ static bool parse_statement(PARSER *pars)
         TRACE("parse_statement", "case");
         next(pars);
         if (!parse_constant_expression(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_COLON))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         break;
     case TK_DEFAULT:
         TRACE("parse_statement", "default");
         next(pars);
         if (!expect(pars, TK_COLON))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         break;
     case TK_BEGIN:
         TRACE("parse_statement", "compound");
-        if (!parse_compound_statement(pars))
+        if (!parse_compound_statement(pars)) {
+            static TOKEN tokens[] = { TK_SEMI, TK_END, TK_EOF };
+            skip_error_to(pars, tokens, COUNT_OF(tokens));
             return false;
+        }
         break;
     case TK_IF:
         TRACE("parse_statement", "if");
         next(pars);
         if (!expect(pars, TK_LPAR))
-            return false;
+            goto fail;
         if (!parse_expression(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_RPAR))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         if (is_token(pars, TK_ELSE)) {
             next(pars);
             if (!parse_statement(pars))
-                return false;
+                goto fail;
         }
         break;
     case TK_SWITCH:
         TRACE("parse_statement", "switch");
         next(pars);
         if (!expect(pars, TK_LPAR))
-            return false;
+            goto fail;
         if (!parse_expression(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_RPAR))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         break;
     case TK_WHILE:
         TRACE("parse_statement", "while");
         next(pars);
         if (!expect(pars, TK_LPAR))
-            return false;
+            goto fail;
         if (!parse_expression(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_RPAR))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         break;
     case TK_DO:
         TRACE("parse_statement", "do");
         next(pars);
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_WHILE))
-            return false;
+            goto fail;
         if (!expect(pars, TK_LPAR))
-            return false;
+            goto fail;
         if (!parse_expression(pars))
-            return false;
+            goto fail;
         if (!expect(pars, TK_RPAR))
-            return false;
+            goto fail;
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     case TK_FOR:
         TRACE("parse_statement", "for");
         next(pars);
         if (!expect(pars, TK_LPAR))
-            return false;
+            goto fail;
         if (is_expression(pars)) {
             if (!parse_expression(pars))
-                return false;
+                goto fail;
         }
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         if (is_expression(pars)) {
             if (!parse_expression(pars))
-                return false;
+                goto fail;
         }
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         if (is_expression(pars)) {
             if (!parse_expression(pars))
-                return false;
+                goto fail;
         }
         if (!expect(pars, TK_RPAR))
-            return false;
+            goto fail;
         if (!parse_statement(pars))
-            return false;
+            goto fail;
         break;
     case TK_GOTO:
         TRACE("parse_statement", "goto");
         next(pars);
         if (!expect(pars, TK_ID))
-            return false;
+            goto fail;
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     case TK_CONTINUE:
         TRACE("parse_statement", "continue");
         next(pars);
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     case TK_BREAK:
         TRACE("parse_statement", "break");
         next(pars);
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     case TK_RETURN:
         TRACE("parse_statement", "return");
         next(pars);
         if (is_expression(pars)) {
             if (!parse_expression(pars))
-                return false;
+                goto fail;
         }
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     case TK_ID:
         if (is_next_colon(pars->scan)) {
             TRACE("parse_statement", "label");
             next(pars);
             if (!expect(pars, TK_COLON))
-                return false;
+                goto fail;
             break;
         }
         /*THROUGH*/
@@ -945,14 +958,18 @@ static bool parse_statement(PARSER *pars)
         TRACE("parse_statement", "expression");
         if (!is_token(pars, TK_SEMI)) {
             if (!parse_expression(pars))
-                return false;
+                goto fail;
         }
         if (!expect(pars, TK_SEMI))
-            return false;
+            goto fail;
         break;
     }
     LEAVE("parse_statement");
     return true;
+
+fail:
+    skip_error_semi(pars);
+    return false;
 }
 
 static bool parse_declaration(PARSER *pars, bool parametered);
@@ -2050,6 +2067,8 @@ static bool parse_external_declaration(PARSER *pars)
     TYPE *typ;
     STORAGE_CLASS sc = SC_DEFAULT;
     TYPE_QUALIFIER tq = TQ_DEFAULT;
+    int count = 0;
+    SYMBOL *sym = NULL;
 
     ENTER("parse_external_declaration");
 
@@ -2078,10 +2097,23 @@ static bool parse_external_declaration(PARSER *pars)
         if (is_declarator(pars)) {
             if (!parse_declarator(pars, &ntyp, &id, &param_list))
                 return false;
-
+            count++;
 printf("id: %s, type: ", id);
 print_type(ntyp);
 printf("\n");
+            sym = lookup_symbol(id);
+            if (sym) {
+                if (sym->kind == SK_FUNC && ntyp->kind == T_FUNC) {
+                    if (!equal_type(sym->type, ntyp))
+                        parser_error(pars, "conflicting types for '%s'", id);
+                } else if (sym->kind == SK_FUNC)
+                    parser_error(pars, "'%s' different kind of symbol", id);
+                else
+                    parser_error(pars, "'%s' duplicated", id);/*TODO*/
+            } else {
+                sym = new_symbol((ntyp->kind == T_FUNC) ? SK_FUNC : SK_GLOBAL,
+                                    sc, id, ntyp);
+            }
 
             if (is_token(pars, TK_ASSIGN)) {
                 next(pars);
@@ -2097,7 +2129,14 @@ printf("\n");
     TRACE("parse_external_declaration", "");
     if (is_token(pars, TK_SEMI)) {
         next(pars);
+        if (count == 0)
+            parser_warning(pars, "empty declaration");
     } else {
+        if (count != 1)
+            parser_error(pars, "syntax error");
+        assert(sym);
+        if (sym->kind != SK_FUNC)
+            parser_error(pars, "invalid function syntax");
         for (;;) {
             if (is_declaration(pars)) {
                 if (!parse_declaration(pars, true))
@@ -2105,8 +2144,16 @@ printf("\n");
             } else
                 break;
         }
+        /*
+        if (sym->has_body) error
+        */
+        enter_function(sym);
+        /*
+        regist param
+        */
         if (!parse_compound_statement(pars))
             return false;
+        leave_function();
     }
     LEAVE("parse_external_declaration");
     return true;
