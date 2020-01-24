@@ -103,6 +103,7 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_BREAK:
     case NK_RETURN:
     case NK_EXPR:
+    default:    /*TODO*/
         /*TODO*/
         break;
     }
