@@ -155,10 +155,10 @@ void print_symtab(const SYMTAB *tab);
 void print_global_symtab(void);
 
 typedef enum {
-    NK_CASE,
-    NK_DEFAULT,
     NK_COMPOUND,
     NK_LINK,
+    NK_CASE,
+    NK_DEFAULT,
     NK_IF,
     NK_THEN,
     NK_SWITCH,
@@ -172,6 +172,7 @@ typedef enum {
     NK_BREAK,
     NK_RETURN,
     NK_EXPR,
+    NK_EXPR_LINK,
 } NODE_KIND;
 
 struct node {

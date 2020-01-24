@@ -39,6 +39,14 @@ NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id)
     return np;
 }
 
+NODE *new_node_case(NODE_KIND kind, const POS *pos, int num, NODE *body)
+{
+    NODE *np = new_node(kind, pos);
+    np->u.ncase.num = num;
+    np->u.ncase.body = body;
+    return np;
+}
+
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
 {
     NODE *np = new_node2(kind, pos, n, NULL);
@@ -71,6 +79,23 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_LINK:
         fprint_node(fp, indent, np->u.link.left);
         fprint_node(fp, indent, np->u.link.right);
+        break;
+    case NK_CASE:
+    case NK_DEFAULT:
+    case NK_IF:
+    case NK_THEN:
+    case NK_SWITCH:
+    case NK_WHILE:
+    case NK_DO:
+    case NK_FOR:
+    case NK_FOR2:
+    case NK_FOR3:
+    case NK_GOTO:
+    case NK_CONTINUE:
+    case NK_BREAK:
+    case NK_RETURN:
+    case NK_EXPR:
+        /*TODO*/
         break;
     }
 }

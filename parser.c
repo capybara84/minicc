@@ -295,7 +295,7 @@ static bool parse_argument_expression_list(PARSER *pars)
     return true;
 }
 
-static bool parse_expression(PARSER *pars);
+static bool parse_expression(PARSER *pars, NODE **node);
 
 /*
 primary_expression
@@ -333,7 +333,7 @@ static bool parse_primary_expression(PARSER *pars)
     case TK_LPAR:
         TRACE("parse_primary_expression", "()");
         next(pars);
-        if (!parse_expression(pars))
+        if (!parse_expression(pars, NULL))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
@@ -357,7 +357,7 @@ postfix_expression
     | postfix_expression '++'
     | postfix_expression '--'
 */
-static bool parse_postfix_expression(PARSER *pars)
+static bool parse_postfix_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_postfix_expression");
     assert(pars);
@@ -367,7 +367,7 @@ static bool parse_postfix_expression(PARSER *pars)
     switch (pars->token) {
     case TK_LBRA:
         next(pars);
-        if (!parse_expression(pars))
+        if (!parse_expression(pars, NULL))
             return false;
         if (!expect(pars, TK_RBRA))
             return false;
@@ -407,7 +407,7 @@ static bool parse_postfix_expression(PARSER *pars)
 }
 
 static bool parse_type_name(PARSER *pars);
-static bool parse_cast_expression(PARSER *pars);
+static bool parse_cast_expression(PARSER *pars, NODE **exp);
 
 /*
 unary_expression
@@ -418,20 +418,30 @@ unary_expression
     | SIZEOF unary_expression
     | SIZEOF '(' type_name ')'
 */
-static bool parse_unary_expression(PARSER *pars)
+static bool parse_unary_expression(PARSER *pars, NODE **exp)
 {
+    NODE_KIND kind;
+    POS pos;
+
     ENTER("parse_unary_expression");
     assert(pars);
+    assert(exp);
 
+    pos = *get_pos(pars);
     if (is_token(pars, TK_INC) || is_token(pars, TK_DEC)) {
+        kind = is_token(pars, TK_INC) ? NK_PREINC : NK_PREDEC;
         next(pars);
-        if (!parse_unary_expression(pars))
+        if (!parse_unary_expression(pars, exp))
             return false;
+        *exp = new_node1(kind, &pos, *exp);
     } else if (is_unary_operator(pars)) {
+        kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_cast_expression(pars))
+        if (!parse_cast_expression(pars, exp))
             return false;
+        *exp = new_node1(kind, &pos, *exp);
     } else if (is_token(pars, TK_SIZEOF)) {
+        /*TODO*/
         next(pars);
         if (is_token(pars, TK_LPAR)) {
             next(pars);
@@ -440,11 +450,12 @@ static bool parse_unary_expression(PARSER *pars)
             if (!expect(pars, TK_RPAR))
                 return false;
         } else {
-            if (!parse_unary_expression(pars))
+            if (!parse_unary_expression(pars, exp))
                 return false;
         }
+        *exp = new_node1(NK_SIZEOF, &pos, *exp);
     } else {
-        if (!parse_postfix_expression(pars))
+        if (!parse_postfix_expression(pars, exp))
             return false;
     }
 
@@ -457,20 +468,30 @@ cast_expression
     = unary_expression
     | '(' type_name ')' cast_expression
 */
-static bool parse_cast_expression(PARSER *pars)
+static bool parse_cast_expression(PARSER *pars, NODE **exp)
 {
+    NODE *ep;
+
     ENTER("parse_cast_expression");
     assert(pars);
+    assert(exp);
 
+    *exp = NULL;
     while (is_token(pars, TK_LPAR)) {
+        POS pos = *get_pos(pars);
         next(pars);
         if (!parse_type_name(pars))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
+        *exp = new_node(NK_CAST, &pos);  /*TODO type*/
     }
-    if (!parse_unary_expression(pars))
+    if (!parse_unary_expression(pars, &ep))
         return false;
+    if (*exp == NULL)
+        *exp = ep;
+    else
+        (*exp)->u.link.left = ep;   /*TODO */
     LEAVE("parse_cast_expression");
     return true;
 }
@@ -479,18 +500,24 @@ static bool parse_cast_expression(PARSER *pars)
 multiplicative_expression
 	= cast_expression {('*'|'/'|'%') cast_expression}
 */
-static bool parse_multiplicative_expression(PARSER *pars)
+static bool parse_multiplicative_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_multiplicative_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_cast_expression(pars))
+    if (!parse_cast_expression(pars, exp))
         return false;
     while (is_token(pars, TK_STAR) || is_token(pars, TK_SLASH)
             || is_token(pars, TK_PERCENT)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_cast_expression(pars))
+        if (!parse_cast_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_multiplicative_expression");
     return true;
@@ -500,17 +527,23 @@ static bool parse_multiplicative_expression(PARSER *pars)
 additive_expression
 	= multiplicative_expression {('+'|'-') multiplicative_expression}
 */
-static bool parse_additive_expression(PARSER *pars)
+static bool parse_additive_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_additive_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_multiplicative_expression(pars))
+    if (!parse_multiplicative_expression(pars, exp))
         return false;
     while (is_token(pars, TK_PLUS) || is_token(pars, TK_MINUS)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_multiplicative_expression(pars))
+        if (!parse_multiplicative_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_additive_expression");
     return true;
@@ -520,17 +553,23 @@ static bool parse_additive_expression(PARSER *pars)
 shift_expression
 	= additive_expression {('<<'|'>>') additive_expression}
 */
-static bool parse_shift_expression(PARSER *pars)
+static bool parse_shift_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_shift_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_additive_expression(pars))
+    if (!parse_additive_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LEFT) || is_token(pars, TK_RIGHT)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_additive_expression(pars))
+        if (!parse_additive_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_shift_expression");
     return true;
@@ -540,18 +579,24 @@ static bool parse_shift_expression(PARSER *pars)
 relational_expression
 	= shift_expression {('<'|'>'|'<='|'>=') shift_expression}
 */
-static bool parse_relational_expression(PARSER *pars)
+static bool parse_relational_expression(PARSER *pars, NODE **exp)
 {
     TOKEN shift_op[] = { TK_LT, TK_GT, TK_LE, TK_GE };
     ENTER("parse_relational_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_shift_expression(pars))
+    if (!parse_shift_expression(pars, exp))
         return false;
     while (is_token_with_array(pars, shift_op, COUNT_OF(shift_op))) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_shift_expression(pars))
+        if (!parse_shift_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_relational_expression");
     return true;
@@ -561,17 +606,23 @@ static bool parse_relational_expression(PARSER *pars)
 equality_expression
 	= relational_expression {('=='|'!=') relational_expression}
 */
-static bool parse_equality_expression(PARSER *pars)
+static bool parse_equality_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_equality_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_relational_expression(pars))
+    if (!parse_relational_expression(pars, exp))
         return false;
     while (is_token(pars, TK_EQ) || is_token(pars, TK_NEQ)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
         if (!parse_relational_expression(pars))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_equality_expression");
     return true;
@@ -581,17 +632,22 @@ static bool parse_equality_expression(PARSER *pars)
 and_expression
 	= equality_expression {'&' equality_expression}
 */
-static bool parse_and_expression(PARSER *pars)
+static bool parse_and_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_and_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_equality_expression(pars))
+    if (!parse_equality_expression(pars, exp))
         return false;
     while (is_token(pars, TK_AND)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_equality_expression(pars))
+        if (!parse_equality_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_AND, &pos, *exp, rhs);
     }
     LEAVE("parse_and_expression");
     return true;
@@ -601,17 +657,22 @@ static bool parse_and_expression(PARSER *pars)
 exclusive_or_expression
 	= and_expression {'^' and_expression}
 */
-static bool parse_exclusive_or_expression(PARSER *pars)
+static bool parse_exclusive_or_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_exclusive_or_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_and_expression(pars))
+    if (!parse_and_expression(pars, exp))
         return false;
     while (is_token(pars, TK_HAT)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_and_expression(pars))
+        if (!parse_and_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_XOR, &pos, *exp, rhs);
     }
     LEAVE("parse_exclusive_or_expression");
     return true;
@@ -621,17 +682,22 @@ static bool parse_exclusive_or_expression(PARSER *pars)
 inclusive_or_expression
 	= exclusive_or_expression {'|' exclusive_or_expression}
 */
-static bool parse_inclusive_or_expression(PARSER *pars)
+static bool parse_inclusive_or_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_inclusive_or_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_exclusive_or_expression(pars))
+    if (!parse_exclusive_or_expression(pars, exp))
         return false;
     while (is_token(pars, TK_OR)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_exclusive_or_expression(pars))
+        if (!parse_exclusive_or_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_OR, &pos, *exp, rhs);
     }
     LEAVE("parse_inclusive_or_expression");
     return true;
@@ -641,17 +707,22 @@ static bool parse_inclusive_or_expression(PARSER *pars)
 logical_and_expression
 	= inclusive_or_expression {'&&' inclusive_or_expression}
 */
-static bool parse_logical_and_expression(PARSER *pars)
+static bool parse_logical_and_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_logical_and_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_inclusive_or_expression(pars))
+    if (!parse_inclusive_or_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LAND)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_inclusive_or_expression(pars))
+        if (!parse_inclusive_or_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_LAND, &pos, *exp, rhs);
     }
     LEAVE("parse_logical_and_expression");
     return true;
@@ -661,17 +732,22 @@ static bool parse_logical_and_expression(PARSER *pars)
 logical_or_expression
 	= logical_and_expression {'||' logical_and_expression}
 */
-static bool parse_logical_or_expression(PARSER *pars)
+static bool parse_logical_or_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_logical_or_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_logical_and_expression(pars))
+    if (!parse_logical_and_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LOR)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_logical_and_expression(pars))
+        if (!parse_logical_and_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_LOR, &pos, *exp, rhs);
     }
     LEAVE("parse_logical_or_expression");
     return true;
@@ -681,22 +757,28 @@ static bool parse_logical_or_expression(PARSER *pars)
 conditional_expression
     = logical_or_expression ['?' expression ':' conditional_expression]
 */
-static bool parse_conditional_expression(PARSER *pars)
+static bool parse_conditional_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_conditional_expression");
 
     assert(pars);
+    assert(exp);
 
-    if (!parse_logical_or_expression(pars))
+    if (!parse_logical_or_expression(pars, exp))
         return false;
     if (is_token(pars, TK_QUES)) {
+        NODE *e2, e3;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_expression(pars))
+        if (!parse_expression(pars, &e2))
             return false;
         if (!expect(pars, TK_SEMI))
             return false;
-        if (!parse_conditional_expression(pars))
+        if (!parse_conditional_expression(pars, &e3))
             return false;
+        /*TODO type check */
+        *exp = new_node2(NK_COND, &pos, exp,
+                    new_node2(NK_COND2, &pos, e2, e3));
     }
     LEAVE("parse_conditional_expression");
     return true;
@@ -707,17 +789,23 @@ assignment_expression
 	= conditional_expression
 	| unary_expression assignment_operator assignment_expression
 */
-static bool parse_assignment_expression(PARSER *pars)
+static bool parse_assignment_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_assignment_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_conditional_expression(pars))
+    if (!parse_conditional_expression(pars, exp))
         return false;
     if (is_assignment_operator(pars)) {
+        NODE *rhs;
+        POS pos = *get_pos(pars);
+        NODE_KIND kind = token_to_node(pars->token);
         next(pars);
-        if (!parse_assignment_expression(pars))
+        if (!parse_assignment_expression(pars, &rhs))
             return false;
+        /*TODO type check */
+        *exp = new_node2(kind, &pos, *exp, rhs);
     }
     LEAVE("parse_assignment_expression");
     return true;
@@ -727,17 +815,21 @@ static bool parse_assignment_expression(PARSER *pars)
 expression
 	= assignment_expression {',' assignment_expression}
 */
-static bool parse_expression(PARSER *pars)
+static bool parse_expression(PARSER *pars, NODE **exp)
 {
     ENTER("parse_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_assignment_expression(pars))
+    if (!parse_assignment_expression(pars, exp))
         return false;
     while (is_token(pars, TK_COMMA)) {
+        NODE *e;
+        POS pos = *get_pos(pars);
         next(pars);
-        if (!parse_assignment_expression(pars))
+        if (!parse_assignment_expression(pars, &e))
             return false;
+        *exp = new_node2(NK_EXPR_LINK, &pos, *exp, e);
     }
     LEAVE("parse_expression");
     return true;
@@ -749,11 +841,13 @@ constant_expression
 */
 static bool parse_constant_expression(PARSER *pars)
 {
+    NODE *e = NULL;
+
     ENTER("parse_constant_expression");
 
     assert(pars);
 
-    if (!parse_conditional_expression(pars))
+    if (!parse_conditional_expression(pars, &e))
         return false;
 
     LEAVE("parse_constant_expression");
@@ -884,11 +978,11 @@ static bool parse_statement(PARSER *pars, NODE **node)
             next(pars);
             if (!expect(pars, TK_LPAR))
                 goto fail;
-            if (!parse_expression(pars))
+            if (!parse_expression(pars, &e))
                 goto fail;
             if (!expect(pars, TK_RPAR))
                 goto fail;
-            if (!parse_statement(pars))
+            if (!parse_statement(pars, &b))
                 goto fail;
             *node = new_node2(NK_SWITCH, &pos, e, b);
         }
