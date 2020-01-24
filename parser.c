@@ -359,45 +359,56 @@ postfix_expression
 */
 static bool parse_postfix_expression(PARSER *pars, NODE **exp)
 {
+    NODE *ep;
+    POS pos;
+
     ENTER("parse_postfix_expression");
     assert(pars);
+    assert(exp);
 
-    if (!parse_primary_expression(pars))
+    if (!parse_primary_expression(pars, exp))
         return false;
+    pos = *get_pos(pars);
     switch (pars->token) {
     case TK_LBRA:
         next(pars);
-        if (!parse_expression(pars, NULL))
+        if (!parse_expression(pars, &ep))
             return false;
         if (!expect(pars, TK_RBRA))
             return false;
+        *exp = new_node1(NK_ARRAY, &pos, ep);
         break;
     case TK_LPAR:
         next(pars);
         if (!is_token(pars, TK_RPAR)) {
-            if (!parse_argument_expression_list(pars))
+            if (!parse_argument_expression_list(pars, ep))
                 return false;
         }
         if (!expect(pars, TK_RPAR))
             return false;
+        *exp = new_node1(NK_CALL, &pos, ep);
         break;
     case TK_DOT:
         next(pars);
         if (!expect_id(pars))
             return false;
+        *exp = new_node_idnode(NK_DOT, &pos, *exp, get_id(pars));
         next(pars);
         break;
     case TK_PTR:
         next(pars);
         if (!expect_id(pars))
             return false;
+        *exp = new_node_idnode(NK_PTR, &pos, *exp, get_id(pars));
         next(pars);
         break;
     case TK_INC:
         next(pars);
+        *exp = new_node1(NK_POSTINC, &pos, *exp);
         break;
     case TK_DEC:
         next(pars);
+        *exp = new_node1(NK_POSTDEC, &pos, *exp);
         break;
     default:
         break;

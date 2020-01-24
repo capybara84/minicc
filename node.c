@@ -39,6 +39,14 @@ NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id)
     return np;
 }
 
+NODE *new_node_idnode(NODE_KIND kind, const POS *pos, NODE *ep, const char *id)
+{
+    NODE *np = new_node(kind, pos);
+    np->u.idnode.node = ep;
+    np->u.idnode.id = id;
+    return np;
+}
+
 NODE *new_node_case(NODE_KIND kind, const POS *pos, int num, NODE *body)
 {
     NODE *np = new_node(kind, pos);

@@ -191,6 +191,10 @@ struct node {
             int num;
             NODE *body;
         } ncase;
+        struct {
+            NODE *node;
+            const char *id;
+        } idnode;
         int num;
         const char *id;
     } u;
@@ -201,6 +205,7 @@ NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np);
 NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right);
 NODE *new_node_num(NODE_KIND kind, const POS *pos, int num);
 NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id);
+NODE *new_node_idnode(NODE_KIND kind, const POS *pos, NODE *ep, const char *id);
 NODE *new_node_case(NODE_KIND kind, const POS *pos, int num, NODE *body);
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
 void fprint_node(FILE *fp, int indent, const NODE *np);
