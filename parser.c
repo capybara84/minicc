@@ -570,15 +570,19 @@ static bool parse_cast_expression(PARSER *pars, NODE **exp)
     assert(exp);
 
     *exp = NULL;
+    /*
     while (is_token(pars, TK_LPAR)) {
         POS pos = *get_pos(pars);
         next(pars);
+        if is type name
         if (!parse_type_name(pars))
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
-        *exp = new_node(NK_CAST, &pos);  /*TODO type*/
+        *exp = new_node(NK_CAST, &pos);
+        TODO type
     }
+    */
     if (!parse_unary_expression(pars, &ep))
         return false;
     if (*exp == NULL)
@@ -932,15 +936,13 @@ static bool parse_expression(PARSER *pars, NODE **exp)
 constant_expression
     = conditional_expression
 */
-static bool parse_constant_expression(PARSER *pars)
+static bool parse_constant_expression(PARSER *pars, NODE **exp)
 {
-    NODE *e = NULL;
-
     ENTER("parse_constant_expression");
 
     assert(pars);
 
-    if (!parse_conditional_expression(pars, &e))
+    if (!parse_conditional_expression(pars, exp))
         return false;
 
     LEAVE("parse_constant_expression");
@@ -997,17 +999,16 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_CASE:
         TRACE("parse_statement", "case");
         {
-            /*TODO value */
-            NODE *b;
+            NODE *e, *b;
             POS pos = *get_pos(pars);
             next(pars);
-            if (!parse_constant_expression(pars))
+            if (!parse_constant_expression(pars, &e))
                 goto fail;
             if (!expect(pars, TK_COLON))
                 goto fail;
             if (!parse_statement(pars, &b))
                 goto fail;
-            *node = new_node_case(NK_CASE, &pos, 0, b);
+            *node = new_node2(NK_CASE, &pos, e, b);
         }
         break;
     case TK_DEFAULT:
@@ -1115,7 +1116,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
                 goto fail;
             if (!expect(pars, TK_SEMI))
                 goto fail;
-            *node = new_node2(NK_DO, &pos, c, b);
+            *node = new_node2(NK_DO, &pos, b, c);
         }
         break;
     case TK_FOR:
@@ -1588,9 +1589,10 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
         return false;
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
+            NODE *e;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars))
+                if (!parse_constant_expression(pars, &e))
                     return false;
             }
             if (!expect(pars,TK_RBRA))
@@ -1686,9 +1688,10 @@ static bool parse_parameter_abstract_declarator(PARSER *pars,
     }
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
+            NODE *e;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars))
+                if (!parse_constant_expression(pars, &e))
                     return false;
             }
             if (!expect(pars,TK_RBRA))
@@ -1833,9 +1836,10 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
 
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
+            NODE *e;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars))
+                if (!parse_constant_expression(pars, &e))
                     return false;
             }
             if (!expect(pars,TK_RBRA))
@@ -1889,8 +1893,9 @@ static bool parse_struct_declarator(PARSER *pars)
     assert(pars);
 
     if (is_token(pars, TK_COLON)) {
+        NODE *e;
         next(pars);
-        if (!parse_constant_expression(pars))
+        if (!parse_constant_expression(pars, &e))
             return false;
     } else {
         typ = new_type(T_UNKNOWN, NULL);
@@ -1898,8 +1903,9 @@ static bool parse_struct_declarator(PARSER *pars)
         if (!parse_declarator(pars, &typ, &id))
             return false;
         if (is_token(pars, TK_COLON)) {
+            NODE *e;
             next(pars);
-            if (!parse_constant_expression(pars))
+            if (!parse_constant_expression(pars, &e))
                 return false;
         }
     }
@@ -2007,8 +2013,9 @@ static bool parse_enumerator(PARSER *pars)
         return false;
     next(pars);
     if (is_token(pars, TK_ASSIGN)) {
+        NODE *e;
         next(pars);
-        if (!parse_constant_expression(pars))
+        if (!parse_constant_expression(pars, &e))
             return false;
     }
     LEAVE("parse_enumerator");
