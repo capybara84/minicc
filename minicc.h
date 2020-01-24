@@ -118,21 +118,26 @@ typedef enum {
     SK_LOCAL, SK_GLOBAL, SK_PARAM, SK_FUNC,
 } SYMBOL_KIND;
 
-typedef struct symbol {
-    struct symbol *next;
+typedef struct symbol SYMBOL;
+typedef struct symtab SYMTAB;
+typedef struct node NODE;
+
+struct symbol {
+    SYMBOL *next;
     STORAGE_CLASS sclass;
     SYMBOL_KIND kind;
     bool is_volatile;
     const char *id;
     TYPE *type;
-    struct symtab *tab;
-} SYMBOL;
+    SYMTAB *tab;
+    NODE *body;
+};
 
-typedef struct symtab {
+struct symtab {
     SYMBOL *head;
     SYMBOL *tail;
     struct symtab *up;
-} SYMTAB;
+};
 
 SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
                     const char *id, TYPE *type);
@@ -150,29 +155,54 @@ void print_symtab(const SYMTAB *tab);
 void print_global_symtab(void);
 
 typedef enum {
-    NK_EXTERNAL_DECL,
+    NK_CASE,
+    NK_DEFAULT,
+    NK_COMPOUND,
+    NK_LINK,
+    NK_IF,
+    NK_THEN,
+    NK_SWITCH,
+    NK_WHILE,
+    NK_DO,
+    NK_FOR,
+    NK_FOR2,
+    NK_FOR3,
+    NK_GOTO,
+    NK_CONTINUE,
+    NK_BREAK,
+    NK_RETURN,
+    NK_EXPR,
 } NODE_KIND;
 
-typedef struct node {
+struct node {
     NODE_KIND kind;
     POS pos;
     union {
         struct {
-            struct node *left;
-            struct node *right;
+            NODE *left;
+            NODE *right;
         } link;
+        struct {
+            NODE *node;
+            SYMTAB *symtab;
+        } comp;
+        struct {
+            int num;
+            NODE *body;
+        } ncase;
         int num;
         const char *id;
     } u;
-} NODE;
+};
 
 NODE *new_node(NODE_KIND kind, const POS *pos);
 NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np);
 NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right);
 NODE *new_node_num(NODE_KIND kind, const POS *pos, int num);
 NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id);
+NODE *new_node_case(NODE_KIND kind, const POS *pos, int num, NODE *body);
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
-void fprint_node(FILE *fp, const NODE *np);
+void fprint_node(FILE *fp, int indent, const NODE *np);
 void print_node(const NODE *np);
 
 typedef struct {

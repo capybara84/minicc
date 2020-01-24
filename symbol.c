@@ -46,6 +46,7 @@ SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
     p->id = id;
     p->type = type;
     p->tab = NULL;
+    p->body = NULL;
     return p;
 }
 

@@ -760,7 +760,7 @@ static bool parse_constant_expression(PARSER *pars)
     return true;
 }
 
-static bool parse_compound_statement(PARSER *pars);
+static bool parse_compound_statement(PARSER *pars, NODE **node);
 
 /*
 statement
@@ -800,152 +800,227 @@ jump_statement
 	| RETURN [expression] ';'
 
 */
-static bool parse_statement(PARSER *pars)
+static bool parse_statement(PARSER *pars, NODE **node)
 {
     ENTER("parse_statement");
     assert(pars);
+    assert(node);
     
     switch (pars->token) {
     case TK_CASE:
         TRACE("parse_statement", "case");
-        next(pars);
-        if (!parse_constant_expression(pars))
-            goto fail;
-        if (!expect(pars, TK_COLON))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
+        {
+            /*TODO value */
+            NODE *b;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!parse_constant_expression(pars))
+                goto fail;
+            if (!expect(pars, TK_COLON))
+                goto fail;
+            if (!parse_statement(pars, &b))
+                goto fail;
+            *node = new_node_case(NK_CASE, &pos, 0, b);
+        }
         break;
     case TK_DEFAULT:
         TRACE("parse_statement", "default");
-        next(pars);
-        if (!expect(pars, TK_COLON))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
+        {
+            NODE *b;
+            POS pos = *get_pos(pars);
+
+            next(pars);
+            if (!expect(pars, TK_COLON))
+                goto fail;
+            if (!parse_statement(pars, &b))
+                goto fail;
+            *node = new_node1(NK_DEFAULT, &pos, b);
+        }
         break;
     case TK_BEGIN:
         TRACE("parse_statement", "compound");
-        if (!parse_compound_statement(pars)) {
-            static TOKEN tokens[] = { TK_SEMI, TK_END, TK_EOF };
-            skip_error_to(pars, tokens, COUNT_OF(tokens));
-            return false;
+        {
+            SYMTAB *tab = enter_scope();
+            if (!parse_compound_statement(pars, node)) {
+                static TOKEN tokens[] = { TK_SEMI, TK_END, TK_EOF };
+                skip_error_to(pars, tokens, COUNT_OF(tokens));
+                leave_scope();
+                return false;
+            }
+            assert(*node && (*node)->kind == NK_COMPOUND);
+            (*node)->u.comp.symtab = tab;
+            leave_scope();
         }
         break;
     case TK_IF:
         TRACE("parse_statement", "if");
-        next(pars);
-        if (!expect(pars, TK_LPAR))
-            goto fail;
-        if (!parse_expression(pars))
-            goto fail;
-        if (!expect(pars, TK_RPAR))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
-        if (is_token(pars, TK_ELSE)) {
+        {
+            NODE *c, *t, *e;
+            POS pos = *get_pos(pars);
             next(pars);
-            if (!parse_statement(pars))
+            if (!expect(pars, TK_LPAR))
                 goto fail;
+            if (!parse_expression(pars, &c))
+                goto fail;
+            if (!expect(pars, TK_RPAR))
+                goto fail;
+            if (!parse_statement(pars, &t))
+                goto fail;
+            if (is_token(pars, TK_ELSE)) {
+                next(pars);
+                if (!parse_statement(pars, &e))
+                    goto fail;
+            } else
+                e = NULL;
+            *node = new_node2(NK_IF, &pos, c,
+                                new_node2(NK_THEN, &t->pos, t, e));
         }
         break;
     case TK_SWITCH:
         TRACE("parse_statement", "switch");
-        next(pars);
-        if (!expect(pars, TK_LPAR))
-            goto fail;
-        if (!parse_expression(pars))
-            goto fail;
-        if (!expect(pars, TK_RPAR))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
+        {
+            NODE *e, *b;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!expect(pars, TK_LPAR))
+                goto fail;
+            if (!parse_expression(pars))
+                goto fail;
+            if (!expect(pars, TK_RPAR))
+                goto fail;
+            if (!parse_statement(pars))
+                goto fail;
+            *node = new_node2(NK_SWITCH, &pos, e, b);
+        }
         break;
     case TK_WHILE:
         TRACE("parse_statement", "while");
-        next(pars);
-        if (!expect(pars, TK_LPAR))
-            goto fail;
-        if (!parse_expression(pars))
-            goto fail;
-        if (!expect(pars, TK_RPAR))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
+        {
+            NODE *c, *b;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!expect(pars, TK_LPAR))
+                goto fail;
+            if (!parse_expression(pars, &c))
+                goto fail;
+            if (!expect(pars, TK_RPAR))
+                goto fail;
+            if (!parse_statement(pars, &b))
+                goto fail;
+            *node = new_node2(NK_WHILE, &pos, c, b);
+        }
         break;
     case TK_DO:
         TRACE("parse_statement", "do");
-        next(pars);
-        if (!parse_statement(pars))
-            goto fail;
-        if (!expect(pars, TK_WHILE))
-            goto fail;
-        if (!expect(pars, TK_LPAR))
-            goto fail;
-        if (!parse_expression(pars))
-            goto fail;
-        if (!expect(pars, TK_RPAR))
-            goto fail;
-        if (!expect(pars, TK_SEMI))
-            goto fail;
+        {
+            NODE *b, *c;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!parse_statement(pars, &b))
+                goto fail;
+            if (!expect(pars, TK_WHILE))
+                goto fail;
+            if (!expect(pars, TK_LPAR))
+                goto fail;
+            if (!parse_expression(pars, &c))
+                goto fail;
+            if (!expect(pars, TK_RPAR))
+                goto fail;
+            if (!expect(pars, TK_SEMI))
+                goto fail;
+            *node = new_node2(NK_DO, &pos, c, b);
+        }
         break;
     case TK_FOR:
         TRACE("parse_statement", "for");
-        next(pars);
-        if (!expect(pars, TK_LPAR))
-            goto fail;
-        if (is_expression(pars)) {
-            if (!parse_expression(pars))
+        {
+            NODE *e1, *e2, *e3, *b;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!expect(pars, TK_LPAR))
                 goto fail;
-        }
-        if (!expect(pars, TK_SEMI))
-            goto fail;
-        if (is_expression(pars)) {
-            if (!parse_expression(pars))
+            if (is_expression(pars)) {
+                if (!parse_expression(pars, &e1))
+                    goto fail;
+            } else
+                e1 = NULL;
+            if (!expect(pars, TK_SEMI))
                 goto fail;
-        }
-        if (!expect(pars, TK_SEMI))
-            goto fail;
-        if (is_expression(pars)) {
-            if (!parse_expression(pars))
+            if (is_expression(pars)) {
+                if (!parse_expression(pars, &e2))
+                    goto fail;
+            } else
+                e2 = NULL;
+            if (!expect(pars, TK_SEMI))
                 goto fail;
+            if (is_expression(pars)) {
+                if (!parse_expression(pars, &e3))
+                    goto fail;
+            } else
+                e3 = NULL;
+            if (!expect(pars, TK_RPAR))
+                goto fail;
+            if (!parse_statement(pars, &b))
+                goto fail;
+            *node = new_node2(NK_FOR, &pos, e1,
+                        new_node2(NK_FOR2, &pos, e2,
+                            new_node2(NK_FOR3, &pos, e3, b)));
         }
-        if (!expect(pars, TK_RPAR))
-            goto fail;
-        if (!parse_statement(pars))
-            goto fail;
         break;
     case TK_GOTO:
         TRACE("parse_statement", "goto");
-        next(pars);
-        if (!expect(pars, TK_ID))
-            goto fail;
-        if (!expect(pars, TK_SEMI))
-            goto fail;
+        {
+            char *id;
+            POS pos = *get_pos(pars);
+
+            next(pars);
+            if (!expect_id(pars))
+                goto fail;
+            id = get_id(pars);
+            next(pars);
+            if (!expect(pars, TK_SEMI))
+                goto fail;
+            *node = new_node_id(NK_GOTO, &pos, id);
+        }
         break;
     case TK_CONTINUE:
         TRACE("parse_statement", "continue");
-        next(pars);
-        if (!expect(pars, TK_SEMI))
-            goto fail;
+        {
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!expect(pars, TK_SEMI))
+                goto fail;
+            *node = new_node(NK_CONTINUE, &pos);
+        }
         break;
     case TK_BREAK:
         TRACE("parse_statement", "break");
-        next(pars);
-        if (!expect(pars, TK_SEMI))
-            goto fail;
+        {
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (!expect(pars, TK_SEMI))
+                goto fail;
+            *node = new_node(NK_BREAK, &pos);
+        }
         break;
     case TK_RETURN:
         TRACE("parse_statement", "return");
-        next(pars);
-        if (is_expression(pars)) {
-            if (!parse_expression(pars))
+        {
+            NODE *e;
+            POS pos = *get_pos(pars);
+            next(pars);
+            if (is_expression(pars)) {
+                if (!parse_expression(pars, &e))
+                    goto fail;
+            } else
+                e = NULL;
+            if (!expect(pars, TK_SEMI))
                 goto fail;
+            *node = new_node1(NK_RETURN, &pos, e);
         }
-        if (!expect(pars, TK_SEMI))
-            goto fail;
         break;
     case TK_ID:
+        /*TODO label node */
         if (is_next_colon(pars->scan)) {
             TRACE("parse_statement", "label");
             next(pars);
@@ -955,13 +1030,19 @@ static bool parse_statement(PARSER *pars)
         }
         /*THROUGH*/
     default:
-        TRACE("parse_statement", "expression");
-        if (!is_token(pars, TK_SEMI)) {
-            if (!parse_expression(pars))
+        {
+            NODE *e;
+            POS pos = *get_pos(pars);
+            TRACE("parse_statement", "expression");
+            if (!is_token(pars, TK_SEMI)) {
+                if (!parse_expression(pars, &e))
+                    goto fail;
+            } else
+                e = NULL;
+            if (!expect(pars, TK_SEMI))
                 goto fail;
+            *node = new_node1(NK_EXPR, &pos, e);
         }
-        if (!expect(pars, TK_SEMI))
-            goto fail;
         break;
     }
     LEAVE("parse_statement");
@@ -978,11 +1059,15 @@ static bool parse_declaration(PARSER *pars, bool parametered);
 compound_statement
 	= '{' {declaration} {statement} '}'
 */
-static bool parse_compound_statement(PARSER *pars)
+static bool parse_compound_statement(PARSER *pars, NODE **node)
 {
     ENTER("parse_compound_statement");
 
     assert(pars);
+    assert(node);
+
+    *node = new_node(NK_COMPOUND, get_pos(pars));
+
     if (!expect(pars, TK_BEGIN))
         return false;
     while (is_declaration(pars)) {
@@ -990,8 +1075,12 @@ static bool parse_compound_statement(PARSER *pars)
             return false;
     }
     while (is_statement(pars)) {
-        if (!parse_statement(pars))
+        NODE *np;
+        POS pos = *get_pos(pars);
+        if (!parse_statement(pars, &np))
             return false;
+        (*node)->u.comp.node = node_link(NK_LINK, &pos, np,
+                (*node)->u.comp.node);
     }
     if (!expect(pars, TK_END))
         return false;
@@ -2066,6 +2155,7 @@ static bool parse_external_declaration(PARSER *pars)
     TYPE_QUALIFIER tq = TQ_DEFAULT;
     int count = 0;
     SYMBOL *sym = NULL;
+    NODE *np = NULL;
 
     ENTER("parse_external_declaration");
 
@@ -2144,10 +2234,12 @@ static bool parse_external_declaration(PARSER *pars)
         */
         enter_function(sym);
         for (p = sym->type->param; p != NULL; p = p->next) {
-            SYMBOL *psym = new_symbol(SK_PARAM, sc, tq, p->id, p->type);
+            new_symbol(SK_PARAM, sc, tq, p->id, p->type);
+            /* calc offset ? */
         }
-        if (!parse_compound_statement(pars))
+        if (!parse_compound_statement(pars, &np))
             return false;
+        sym->body = np;
         leave_function();
     }
     LEAVE("parse_external_declaration");
