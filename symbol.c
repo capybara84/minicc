@@ -124,6 +124,7 @@ void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
     if (sym->kind == SK_FUNC) {
         fprintf(fp, "%*s{\n", indent, "");
         fprint_symtab(fp, indent+2, sym->tab);
+        fprint_node(fp, indent+2, sym->body);
         fprintf(fp, "%*s}\n", indent, "");
     }
 }

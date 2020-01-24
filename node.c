@@ -88,11 +88,11 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprint_node(fp, indent, np->u.link.left);
         fprint_node(fp, indent, np->u.link.right);
         break;
-    case NK_CASE:
-    case NK_DEFAULT:
     case NK_IF:
     case NK_THEN:
     case NK_SWITCH:
+    case NK_CASE:
+    case NK_DEFAULT:
     case NK_WHILE:
     case NK_DO:
     case NK_FOR:
@@ -101,8 +101,68 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_GOTO:
     case NK_CONTINUE:
     case NK_BREAK:
+        /*TODO*/
+        break;
     case NK_RETURN:
     case NK_EXPR:
+    case NK_EXPR_LINK:
+    case NK_ASSIGN:
+    case NK_AS_MUL:
+    case NK_AS_DIV:
+    case NK_AS_MOD:
+    case NK_AS_ADD:
+    case NK_AS_SUB:
+    case NK_AS_SHL:
+    case NK_AS_SHR:
+    case NK_AS_AND:
+    case NK_AS_XOR:
+    case NK_AS_OR:
+    case NK_EQ:
+    case NK_NEQ:
+    case NK_LT:
+    case NK_GT:
+    case NK_LE:
+    case NK_GE:
+    case NK_SHL:
+    case NK_SHR:
+    case NK_ADD:
+    case NK_SUB:
+    case NK_MUL:
+    case NK_DIV:
+    case NK_MOD:
+    case NK_CAST:
+    case NK_PREINC:
+    case NK_PREDEC:
+    case NK_SIZEOF:
+    case NK_COND:
+    case NK_COND2:
+    case NK_LOR:
+    case NK_LAND:
+    case NK_OR:
+    case NK_XOR:
+    case NK_AND:
+    case NK_ARRAY:
+    case NK_CALL:
+    case NK_DOT:
+    case NK_PTR:
+    case NK_POSTINC:
+    case NK_POSTDEC:
+    case NK_ID:
+    case NK_CHAR_LIT:
+    case NK_INT_LIT:
+    case NK_UINT_LIT:
+    case NK_LONG_LIT:
+    case NK_ULONG_LIT:
+    case NK_FLOAT_LIT:
+    case NK_DOUBLE_LIT:
+    case NK_STRING_LIT:
+    case NK_ARG:
+    case NK_ADDR:
+    case NK_DEREF:
+    case NK_UPLUS:
+    case NK_UMINUS:
+    case NK_COMPLEMENT:
+    case NK_NOT:
     default:    /*TODO*/
         /*TODO*/
         break;

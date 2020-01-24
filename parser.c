@@ -281,38 +281,49 @@ static bool is_unary_operator(PARSER *pars)
 #define is_struct_declaration(p)        is_specifier_qualifier_list(p)
 
 
+static NODE_KIND token_to_unary_node(TOKEN tok)
+{
+    switch (tok) {
+    case TK_AND:    return NK_ADDR;
+    case TK_STAR:   return NK_DEREF;
+    case TK_PLUS:   return NK_UPLUS;
+    case TK_MINUS:  return NK_UMINUS;
+    case TK_TILDE:  return NK_COMPLEMENT;
+    case TK_NOT:    return NK_NOT;
+    default:    assert(0);
+    }
+    return NK_LINK;
+}
+
 static NODE_KIND token_to_node(TOKEN tok)
 {
     switch (tok) {
-    case TK_ASSIGN:
-    case TK_MUL_AS:
-    case TK_DIV_AS:
-    case TK_MOD_AS:
-    case TK_ADD_AS:
-    case TK_SUB_AS:
-    case TK_LEFT_AS:
-    case TK_RIGHT_AS:
-    case TK_AND_AS:
-    case TK_XOR_AS:
-    case TK_OR_AS:
-    case TK_EQ:
-    case TK_NEQ:
-    case TK_LT:
-    case TK_GT:
-    case TK_LE:
-    case TK_GE:
-    case TK_LEFT:
-    case TK_RIGHT:
-    case TK_PLUS:
-    case TK_MINUS:
-    case TK_STAR:
-    case TK_SLASH:
-    case TK_PERCENT:
-    case TK_INC:
-    case TK_DEC:
-    case TK_SIZEOF:
-    default:
-        break;
+    case TK_ASSIGN:     return NK_ASSIGN;
+    case TK_MUL_AS:     return NK_AS_MUL;
+    case TK_DIV_AS:     return NK_AS_DIV;
+    case TK_MOD_AS:     return NK_AS_MOD;
+    case TK_ADD_AS:     return NK_AS_ADD;
+    case TK_SUB_AS:     return NK_AS_SUB;
+    case TK_LEFT_AS:    return NK_AS_SHL;
+    case TK_RIGHT_AS:   return NK_AS_SHR;
+    case TK_AND_AS:     return NK_AS_AND;
+    case TK_XOR_AS:     return NK_AS_XOR;
+    case TK_OR_AS:      return NK_AS_OR;
+    case TK_EQ:         return NK_EQ;
+    case TK_NEQ:        return NK_NEQ;
+    case TK_LT:         return NK_LT;
+    case TK_GT:         return NK_GT;
+    case TK_LE:         return NK_LE;
+    case TK_GE:         return NK_GE;
+    case TK_LEFT:       return NK_SHL;
+    case TK_RIGHT:      return NK_SHR;
+    case TK_PLUS:       return NK_ADD;
+    case TK_MINUS:      return NK_SUB;
+    case TK_STAR:       return NK_MUL;
+    case TK_SLASH:      return NK_DIV;
+    case TK_PERCENT:    return NK_MOD;
+    case TK_SIZEOF:     return NK_SIZEOF;
+    default:    assert(0);
     }
     return NK_LINK;
 }
@@ -376,14 +387,26 @@ static bool parse_primary_expression(PARSER *pars, NODE **exp)
         *exp = new_node_id(NK_ID, &pos, get_id(pars));
         next(pars);
         break;
+    case TK_CHAR_LIT:
+        TRACE("parse_primary_expression", "CHAR_LIT");
+        *exp = new_node_num(NK_CHAR_LIT, &pos, get_int_lit(pars));
+        next(pars);
+        break;
     case TK_INT_LIT:
+        TRACE("parse_primary_expression", "INT_LIT");
+        *exp = new_node_num(NK_INT_LIT, &pos, get_int_lit(pars));
+        next(pars);
+        break;
+    case TK_STRING_LIT:
+        TRACE("parse_primary_expression", "STRING_LIT");
+        /*TODO*/
+        next(pars);
+        break;
     case TK_UINT_LIT:
     case TK_LONG_LIT:
     case TK_ULONG_LIT:
-    case TK_CHAR_LIT:
     case TK_FLOAT_LIT:
     case TK_DOUBLE_LIT:
-    case TK_STRING_LIT:
         TRACE("parse_primary_expression", "_LIT");
         /*TODO*/
         *exp = new_node_num(NK_INT_LIT, &pos, get_int_lit(pars));
@@ -505,7 +528,7 @@ static bool parse_unary_expression(PARSER *pars, NODE **exp)
             return false;
         *exp = new_node1(kind, &pos, *exp);
     } else if (is_unary_operator(pars)) {
-        kind = token_to_node(pars->token);
+        kind = token_to_unary_node(pars->token);
         next(pars);
         if (!parse_cast_expression(pars, exp))
             return false;
