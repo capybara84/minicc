@@ -336,7 +336,7 @@ argument_expression_list
 */
 static bool parse_argument_expression_list(PARSER *pars, NODE **exp)
 {
-    NODE *ep;
+    NODE *ep = NULL;
     POS pos;
 
     ENTER("parse_argument_expression_list");
@@ -441,7 +441,7 @@ postfix_expression
 */
 static bool parse_postfix_expression(PARSER *pars, NODE **exp)
 {
-    NODE *ep;
+    NODE *ep = NULL;
     POS pos;
 
     ENTER("parse_postfix_expression");
@@ -563,7 +563,7 @@ cast_expression
 */
 static bool parse_cast_expression(PARSER *pars, NODE **exp)
 {
-    NODE *ep;
+    NODE *ep = NULL;
 
     ENTER("parse_cast_expression");
     assert(pars);
@@ -607,7 +607,7 @@ static bool parse_multiplicative_expression(PARSER *pars, NODE **exp)
         return false;
     while (is_token(pars, TK_STAR) || is_token(pars, TK_SLASH)
             || is_token(pars, TK_PERCENT)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -633,7 +633,7 @@ static bool parse_additive_expression(PARSER *pars, NODE **exp)
     if (!parse_multiplicative_expression(pars, exp))
         return false;
     while (is_token(pars, TK_PLUS) || is_token(pars, TK_MINUS)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -659,7 +659,7 @@ static bool parse_shift_expression(PARSER *pars, NODE **exp)
     if (!parse_additive_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LEFT) || is_token(pars, TK_RIGHT)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -686,7 +686,7 @@ static bool parse_relational_expression(PARSER *pars, NODE **exp)
     if (!parse_shift_expression(pars, exp))
         return false;
     while (is_token_with_array(pars, rel_op, COUNT_OF(rel_op))) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -712,7 +712,7 @@ static bool parse_equality_expression(PARSER *pars, NODE **exp)
     if (!parse_relational_expression(pars, exp))
         return false;
     while (is_token(pars, TK_EQ) || is_token(pars, TK_NEQ)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -738,7 +738,7 @@ static bool parse_and_expression(PARSER *pars, NODE **exp)
     if (!parse_equality_expression(pars, exp))
         return false;
     while (is_token(pars, TK_AND)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_equality_expression(pars, &rhs))
@@ -763,7 +763,7 @@ static bool parse_exclusive_or_expression(PARSER *pars, NODE **exp)
     if (!parse_and_expression(pars, exp))
         return false;
     while (is_token(pars, TK_HAT)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_and_expression(pars, &rhs))
@@ -788,7 +788,7 @@ static bool parse_inclusive_or_expression(PARSER *pars, NODE **exp)
     if (!parse_exclusive_or_expression(pars, exp))
         return false;
     while (is_token(pars, TK_OR)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_exclusive_or_expression(pars, &rhs))
@@ -813,7 +813,7 @@ static bool parse_logical_and_expression(PARSER *pars, NODE **exp)
     if (!parse_inclusive_or_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LAND)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_inclusive_or_expression(pars, &rhs))
@@ -838,7 +838,7 @@ static bool parse_logical_or_expression(PARSER *pars, NODE **exp)
     if (!parse_logical_and_expression(pars, exp))
         return false;
     while (is_token(pars, TK_LOR)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_logical_and_expression(pars, &rhs))
@@ -864,7 +864,8 @@ static bool parse_conditional_expression(PARSER *pars, NODE **exp)
     if (!parse_logical_or_expression(pars, exp))
         return false;
     if (is_token(pars, TK_QUES)) {
-        NODE *e2, *e3;
+        NODE *e2 = NULL;
+        NODE *e3 = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_expression(pars, &e2))
@@ -895,7 +896,7 @@ static bool parse_assignment_expression(PARSER *pars, NODE **exp)
     if (!parse_conditional_expression(pars, exp))
         return false;
     if (is_assignment_operator(pars)) {
-        NODE *rhs;
+        NODE *rhs = NULL;
         POS pos = *get_pos(pars);
         NODE_KIND kind = token_to_node(pars->token);
         next(pars);
@@ -921,7 +922,7 @@ static bool parse_expression(PARSER *pars, NODE **exp)
     if (!parse_assignment_expression(pars, exp))
         return false;
     while (is_token(pars, TK_COMMA)) {
-        NODE *e;
+        NODE *e = NULL;
         POS pos = *get_pos(pars);
         next(pars);
         if (!parse_assignment_expression(pars, &e))
@@ -999,7 +1000,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_CASE:
         TRACE("parse_statement", "case");
         {
-            NODE *e, *b;
+            NODE *e = NULL, *b = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!parse_constant_expression(pars, &e))
@@ -1014,7 +1015,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_DEFAULT:
         TRACE("parse_statement", "default");
         {
-            NODE *b;
+            NODE *b = NULL;
             POS pos = *get_pos(pars);
 
             next(pars);
@@ -1043,7 +1044,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_IF:
         TRACE("parse_statement", "if");
         {
-            NODE *c, *t, *e;
+            NODE *c = NULL, *t = NULL, *e = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!expect(pars, TK_LPAR))
@@ -1067,7 +1068,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_SWITCH:
         TRACE("parse_statement", "switch");
         {
-            NODE *e, *b;
+            NODE *e = NULL, *b = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!expect(pars, TK_LPAR))
@@ -1084,7 +1085,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_WHILE:
         TRACE("parse_statement", "while");
         {
-            NODE *c, *b;
+            NODE *c = NULL, *b = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!expect(pars, TK_LPAR))
@@ -1101,7 +1102,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_DO:
         TRACE("parse_statement", "do");
         {
-            NODE *b, *c;
+            NODE *b = NULL, *c = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!parse_statement(pars, &b))
@@ -1122,7 +1123,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_FOR:
         TRACE("parse_statement", "for");
         {
-            NODE *e1, *e2, *e3, *b;
+            NODE *e1 = NULL, *e2 = NULL, *e3 = NULL, *b = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (!expect(pars, TK_LPAR))
@@ -1194,7 +1195,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
     case TK_RETURN:
         TRACE("parse_statement", "return");
         {
-            NODE *e;
+            NODE *e = NULL;
             POS pos = *get_pos(pars);
             next(pars);
             if (is_expression(pars)) {
@@ -1219,7 +1220,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
         /*THROUGH*/
     default:
         {
-            NODE *e;
+            NODE *e = NULL;
             POS pos = *get_pos(pars);
             TRACE("parse_statement", "expression");
             if (!is_token(pars, TK_SEMI)) {
@@ -1263,7 +1264,7 @@ static bool parse_compound_statement(PARSER *pars, NODE **node)
             return false;
     }
     while (is_statement(pars)) {
-        NODE *np;
+        NODE *np = NULL;
         POS pos = *get_pos(pars);
         if (!parse_statement(pars, &np))
             return false;
@@ -1589,7 +1590,7 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
         return false;
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
-            NODE *e;
+            NODE *e = NULL;
             next(pars);
             if (is_constant_expression(pars)) {
                 if (!parse_constant_expression(pars, &e))
@@ -1688,7 +1689,7 @@ static bool parse_parameter_abstract_declarator(PARSER *pars,
     }
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
-            NODE *e;
+            NODE *e = NULL;
             next(pars);
             if (is_constant_expression(pars)) {
                 if (!parse_constant_expression(pars, &e))
@@ -1836,7 +1837,7 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
 
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
-            NODE *e;
+            NODE *e = NULL;
             next(pars);
             if (is_constant_expression(pars)) {
                 if (!parse_constant_expression(pars, &e))
@@ -1893,7 +1894,7 @@ static bool parse_struct_declarator(PARSER *pars)
     assert(pars);
 
     if (is_token(pars, TK_COLON)) {
-        NODE *e;
+        NODE *e = NULL;
         next(pars);
         if (!parse_constant_expression(pars, &e))
             return false;
@@ -1903,7 +1904,7 @@ static bool parse_struct_declarator(PARSER *pars)
         if (!parse_declarator(pars, &typ, &id))
             return false;
         if (is_token(pars, TK_COLON)) {
-            NODE *e;
+            NODE *e = NULL;
             next(pars);
             if (!parse_constant_expression(pars, &e))
                 return false;
@@ -2013,7 +2014,7 @@ static bool parse_enumerator(PARSER *pars)
         return false;
     next(pars);
     if (is_token(pars, TK_ASSIGN)) {
-        NODE *e;
+        NODE *e = NULL;
         next(pars);
         if (!parse_constant_expression(pars, &e))
             return false;
