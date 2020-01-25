@@ -458,7 +458,7 @@ static bool parse_postfix_expression(PARSER *pars, NODE **exp)
             return false;
         if (!expect(pars, TK_RBRA))
             return false;
-        *exp = new_node1(NK_ARRAY, &pos, ep);
+        *exp = new_node2(NK_ARRAY, &pos, *exp, ep);
         break;
     case TK_LPAR:
         next(pars);
@@ -468,7 +468,7 @@ static bool parse_postfix_expression(PARSER *pars, NODE **exp)
         }
         if (!expect(pars, TK_RPAR))
             return false;
-        *exp = new_node1(NK_CALL, &pos, ep);
+        *exp = new_node2(NK_CALL, &pos, *exp, ep);
         break;
     case TK_DOT:
         next(pars);
@@ -870,7 +870,7 @@ static bool parse_conditional_expression(PARSER *pars, NODE **exp)
         next(pars);
         if (!parse_expression(pars, &e2))
             return false;
-        if (!expect(pars, TK_SEMI))
+        if (!expect(pars, TK_COLON))
             return false;
         if (!parse_conditional_expression(pars, &e3))
             return false;
