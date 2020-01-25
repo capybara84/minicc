@@ -1260,6 +1260,7 @@ static bool parse_compound_statement(PARSER *pars, NODE **node)
     if (!expect(pars, TK_BEGIN))
         return false;
     while (is_declaration(pars)) {
+        /* TODO local var */
         if (!parse_declaration(pars, false))
             return false;
     }
@@ -1887,6 +1888,7 @@ struct_declarator
 */
 static bool parse_struct_declarator(PARSER *pars)
 {
+    /*TODO*/
     TYPE *typ;
     char *id;
 
@@ -1920,6 +1922,7 @@ struct_declarator_list
 */
 static bool parse_struct_declarator_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_struct_declarator_list");
     assert(pars);
 
@@ -1940,6 +1943,7 @@ struct_declaration
 */
 static bool parse_struct_declaration(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_struct_declaration");
     assert(pars);
 
@@ -1959,6 +1963,7 @@ struct_declaration_list
 */
 static bool parse_struct_declaration_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_struct_declaration_list");
     assert(pars);
 
@@ -1981,6 +1986,7 @@ struct_or_union
 */
 static bool parse_struct_or_union_specifier(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_struct_or_union_specifier");
     assert(pars);
 
@@ -2007,6 +2013,7 @@ enumerator
 */
 static bool parse_enumerator(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_enumerator");
     assert(pars);
 
@@ -2029,6 +2036,7 @@ enumerator_list
 */
 static bool parse_enumerator_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_enumerator_list");
     assert(pars);
 
@@ -2050,6 +2058,7 @@ enum_specifier
 */
 static bool parse_enum_specifier(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_enum_specifier");
     assert(pars);
 
@@ -2398,6 +2407,7 @@ static bool parse_external_declaration(PARSER *pars)
                 next(pars);
                 if (!parse_initializer(pars))
                     return false;
+                /*TODO*/
             }
             if (!is_token(pars, TK_COMMA))
                 break;
@@ -2419,6 +2429,7 @@ static bool parse_external_declaration(PARSER *pars)
         if (sym->kind != SK_FUNC)
             parser_error(pars, "invalid function syntax");
         for (;;) {
+            /*TODO*/
             if (is_declaration(pars)) {
                 if (!parse_declaration(pars, true))
                     return false;

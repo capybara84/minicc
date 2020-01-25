@@ -70,3 +70,8 @@ int func()
 typedef typedef int I;
 
 signed signed int a;
+
+/* warning */
+scfoo() {}
+scbar();
+
