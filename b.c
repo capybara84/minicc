@@ -1,6 +1,4 @@
 
 int foo()
 {
-label:
-    ;
 }

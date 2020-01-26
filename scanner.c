@@ -222,7 +222,7 @@ static TOKEN scan_num(SCANNER *scan)
     }
     buffer[i] = '\0';
     scan->num = atoi(buffer);
-    /* TODO unsigned, long, float, double */
+    /* TODO impl unsigned, long, float, double */
     return TK_INT_LIT;
 }
 
@@ -246,7 +246,7 @@ static unsigned char scan_a_char(SCANNER *scan)
         case 'x':
         case 'o':
         default:
-            /*TODO*/
+            /*TODO impl 0xHH, 0OO*/
             c = scan->ch;
             break;
         }

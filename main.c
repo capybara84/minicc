@@ -24,6 +24,7 @@ void usage()
     printf(" -ds  debug scanner\n");
     printf(" -dt  debug parser_trace\n");
     printf(" -dp  debug parser\n");
+    printf(" -dn  debug node type\n");
     exit(1);
 }
 
@@ -44,6 +45,7 @@ int main(int argc ,char* argv[])
                     case 's': set_debug("scanner"); break;
                     case 't': set_debug("parser_trace"); break;
                     case 'p': set_debug("parser"); break;
+                    case 'n': set_debug("node_type"); break;
                     default: usage();
                     }
                 }

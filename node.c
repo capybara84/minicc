@@ -1,47 +1,56 @@
 #include "minicc.h"
 
-NODE *new_node(NODE_KIND kind, const POS *pos)
+NODE *new_node(NODE_KIND kind, const POS *pos, TYPE *typ)
 {
     NODE *np = (NODE*) alloc(sizeof (NODE));
     np->kind = kind;
     np->pos = *pos;
+    np->type = typ;
     np->u.link.left = NULL;
     np->u.link.right = NULL;
     return np;
 }
 
-NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np)
+NODE *new_node1(NODE_KIND kind, const POS *pos, TYPE *typ, NODE *np)
 {
-    NODE *node = new_node(kind, pos);
+    NODE *node = new_node(kind, pos, typ);
     node->u.link.left = np;
     return node;
 }
 
-NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right)
+NODE *new_node2(NODE_KIND kind, const POS *pos, TYPE *typ, NODE *left, NODE *right)
 {
-    NODE *np = new_node(kind, pos);
+    NODE *np = new_node(kind, pos, typ);
     np->u.link.left = left;
     np->u.link.right = right;
     return np;
 }
 
-NODE *new_node_num(NODE_KIND kind, const POS *pos, int num)
+NODE *new_node_num(NODE_KIND kind, const POS *pos, TYPE *typ, int num)
 {
-    NODE *np = new_node(kind, pos);
+    NODE *np = new_node(kind, pos, typ);
     np->u.num = num;
     return np;
 }
 
-NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id)
+NODE *new_node_id(NODE_KIND kind, const POS *pos, TYPE *typ, const char *id)
 {
-    NODE *np = new_node(kind, pos);
+    NODE *np = new_node(kind, pos, typ);
     np->u.id = id;
     return np;
 }
 
-NODE *new_node_idnode(NODE_KIND kind, const POS *pos, NODE *ep, const char *id)
+NODE *new_node_sym(NODE_KIND kind, const POS *pos, TYPE *typ, SYMBOL *sym)
 {
-    NODE *np = new_node(kind, pos);
+    NODE *np = new_node(kind, pos, typ);
+    np->u.sym = sym;
+    return np;
+}
+
+NODE *new_node_idnode(NODE_KIND kind, const POS *pos, TYPE *typ,
+                        NODE *ep, const char *id)
+{
+    NODE *np = new_node(kind, pos, typ);
     np->u.idnode.node = ep;
     np->u.idnode.id = id;
     return np;
@@ -49,7 +58,7 @@ NODE *new_node_idnode(NODE_KIND kind, const POS *pos, NODE *ep, const char *id)
 
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
 {
-    NODE *np = new_node2(kind, pos, n, NULL);
+    NODE *np = new_node2(kind, pos, NULL, n, NULL);
     NODE *p;
     if (top == NULL)
         return np;
@@ -233,20 +242,32 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprintf(fp, " %s ", get_node_op_string(np->kind));
         fprint_node(fp, indent, np->u.link.right);
         fprintf(fp, ")");
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_ADDR: case NK_DEREF: case NK_UPLUS: case NK_UMINUS:
     case NK_COMPLEMENT: case NK_NOT: case NK_PREINC:
     case NK_PREDEC: case NK_SIZEOF:
         fprintf(fp, "%s", get_node_op_string(np->kind));
         fprint_node(fp, indent, np->u.link.left);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_POSTINC:
     case NK_POSTDEC:
         fprint_node(fp, indent, np->u.link.left);
         fprintf(fp, "%s", get_node_op_string(np->kind));
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_CAST:
-        /*TODO*/
+        /*TODO impl cast */
         break;
     case NK_COND:
         {
@@ -255,11 +276,17 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
             assert(e && e->kind == NK_COND2);
             e2 = e->u.link.left;
             e3 = e->u.link.right;
+            fprintf(fp, "(");
             fprint_node(fp, indent, np->u.link.left);
             fprintf(fp, " ? ");
             fprint_node(fp, indent, e2);
             fprintf(fp, " : ");
             fprint_node(fp, indent, e3);
+            fprintf(fp, ")");
+        }
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
         }
         break;
     case NK_COND2:
@@ -270,12 +297,20 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprintf(fp, "[");
         fprint_node(fp, indent, np->u.link.right);
         fprintf(fp, "]");
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_CALL:
         fprint_node(fp, indent, np->u.link.left);
         fprintf(fp, "(");
         fprint_node(fp, indent, np->u.link.right);
         fprintf(fp, ")");
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_ARG:
         fprint_node(fp, indent, np->u.link.left);
@@ -287,19 +322,42 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_DOT:
         fprint_node(fp, indent, np->u.idnode.node);
         fprintf(fp, ".%s", np->u.idnode.id);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_PTR:
         fprint_node(fp, indent, np->u.idnode.node);
         fprintf(fp, "->%s", np->u.idnode.id);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_ID:
-        fprintf(fp, "%s", np->u.id);
+        if (np->u.sym == NULL)
+            fprintf(fp, "<NULL>");
+        else
+            fprintf(fp, "%s", np->u.sym->id);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_CHAR_LIT:
         fprintf(fp, "'%c'", np->u.num);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_INT_LIT:
         fprintf(fp, "%d", np->u.num); 
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     case NK_UINT_LIT:
     case NK_LONG_LIT:
@@ -307,7 +365,7 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_FLOAT_LIT:
     case NK_DOUBLE_LIT:
     case NK_STRING_LIT:
-        /*TODO*/
+        /*TODO impl literal */
         break;
     }
 }

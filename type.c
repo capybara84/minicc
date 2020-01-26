@@ -1,5 +1,8 @@
 #include "minicc.h"
 
+TYPE g_type_uchar = { T_UCHAR, SC_DEFAULT, TQ_DEFAULT, NULL, NULL, NULL };
+TYPE g_type_int = { T_INT, SC_DEFAULT, TQ_DEFAULT, NULL, NULL, NULL };
+
 PARAM *new_param(char *id, TYPE *typ)
 {
     PARAM *param = (PARAM*) alloc(sizeof (PARAM));
@@ -74,29 +77,124 @@ bool equal_type(const TYPE *tl, const TYPE *tr)
     return true;
 }
 
+TYPE *type_check_array(const POS *pos, const TYPE *arr, const TYPE *e)
+{
+    /*TODO impl */
+    return &g_type_int;
+}
+
+TYPE *type_check_call(const POS *pos, const TYPE *fn, const TYPE *arg)
+{
+    /*TODO impl */
+    return &g_type_int;
+}
+
+TYPE *type_check_idnode(const POS *pos, NODE_KIND kind,
+                        const TYPE *e, const char *id)
+{
+    /*TODO impl */
+    return &g_type_int;
+}
+
+TYPE *type_check_postfix(const POS *pos, NODE_KIND kind, TYPE *e)
+{
+    /*TODO impl */
+    return e;
+}
+
+TYPE *type_check_unary(const POS *pos, NODE_KIND kind, TYPE *e)
+{
+    /*TODO impl */
+    return e;
+}
+
+
+TYPE *type_check_bin(const POS *pos, NODE_KIND kind,
+                        TYPE *lhs, TYPE *rhs)
+{
+    switch (kind) {
+    case NK_ASSIGN:
+    case NK_AS_MUL:
+    case NK_AS_DIV:
+    case NK_AS_MOD:
+    case NK_AS_ADD:
+    case NK_AS_SUB:
+    case NK_AS_SHL:
+    case NK_AS_SHR:
+    case NK_AS_AND:
+    case NK_AS_XOR:
+    case NK_AS_OR:
+        /*TODO impl */
+        return lhs;
+    case NK_EQ:
+    case NK_NEQ:
+        /*TODO impl */
+        return &g_type_int;
+    case NK_LT:
+    case NK_GT:
+    case NK_LE:
+    case NK_GE:
+        /*TODO impl */
+        return &g_type_int;
+    case NK_SHL:
+    case NK_SHR:
+    case NK_ADD:
+    case NK_SUB:
+    case NK_MUL:
+    case NK_DIV:
+    case NK_MOD:
+    case NK_AND:
+    case NK_XOR:
+    case NK_OR:
+        /*TODO impl */
+        return &g_type_int;
+    case NK_LAND:
+        /*TODO impl */
+        return &g_type_int;
+    case NK_LOR:
+        /*TODO impl */
+        return &g_type_int;
+    case NK_COND2:
+        /*TODO impl */
+        return lhs;
+    case NK_SIZEOF:
+        /*TODO impl */
+        return &g_type_int;
+    default:
+        assert(0);
+        break;
+    }
+    error(pos, "'%s' type mismatch", get_node_op_string(kind));
+    return &g_type_int;
+}
+
+void type_check_value(const POS *pos, const TYPE *t)
+{
+    /*TODO impl */
+}
 
 const char *get_type_string(const TYPE *typ)
 {
     if (typ == NULL)
         return "NUL";
     switch (typ->kind) {
-    case T_UNKNOWN: return "UNKNOWN";
-    case T_VOID:    return "void";
-    case T_NULL:    return "null";
-    case T_CHAR:    return "char";
-    case T_UCHAR:   return "uchar";
-    case T_SHORT:   return "short";
-    case T_USHORT:  return "ushort";
-    case T_INT:     return "int";
-    case T_UINT:    return "uint";
-    case T_LONG:    return "long";
-    case T_ULONG:   return "ulong";
-    case T_FLOAT:   return "float";
-    case T_DOUBLE:  return "double";
+    case T_UNKNOWN:     return "UNKNOWN";
+    case T_VOID:        return "void";
+    case T_NULL:        return "null";
+    case T_CHAR:        return "char";
+    case T_UCHAR:       return "uchar";
+    case T_SHORT:       return "short";
+    case T_USHORT:      return "ushort";
+    case T_INT:         return "int";
+    case T_UINT:        return "uint";
+    case T_LONG:        return "long";
+    case T_ULONG:       return "ulong";
+    case T_FLOAT:       return "float";
+    case T_DOUBLE:      return "double";
     case T_STRUCT:      return "struct"; /*TODO*/
     case T_UNION:       return "union"; /*TODO*/
     case T_ENUM:        return "enum";  /*TODO*/
-    case T_TYPEDEF_NAME:    return "typedef_name";  /*TODO*/
+    case T_TYPEDEF_NAME:return "typedef_name";  /*TODO*/
     case T_POINTER:     return "pointer";   /*TODO*/
     case T_ARRAY:       return "array";   /*TODO*/
     case T_FUNC:        return "func";  /*TODO*/

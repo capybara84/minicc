@@ -73,6 +73,21 @@ const char *token_to_string(TOKEN tk);
 const char *scan_token_to_string(SCANNER *scan, TOKEN tk);
 
 typedef enum {
+    NK_COMPOUND, NK_LINK, NK_IF, NK_THEN, NK_SWITCH, NK_CASE, NK_DEFAULT,
+    NK_WHILE, NK_DO, NK_FOR, NK_FOR2, NK_FOR3, NK_GOTO, NK_CONTINUE,
+    NK_BREAK, NK_RETURN, NK_LABEL, NK_EXPR,
+    NK_EXPR_LINK, NK_ASSIGN, NK_AS_MUL, NK_AS_DIV, NK_AS_MOD, NK_AS_ADD,
+    NK_AS_SUB, NK_AS_SHL, NK_AS_SHR, NK_AS_AND, NK_AS_XOR, NK_AS_OR,
+    NK_EQ, NK_NEQ, NK_LT, NK_GT, NK_LE, NK_GE, NK_SHL, NK_SHR, NK_ADD, NK_SUB,
+    NK_MUL, NK_DIV, NK_MOD, NK_CAST, NK_PREINC, NK_PREDEC, NK_SIZEOF,
+    NK_COND, NK_COND2, NK_LOR, NK_LAND, NK_OR, NK_XOR, NK_AND,
+    NK_ARRAY, NK_CALL, NK_DOT, NK_PTR, NK_POSTINC, NK_POSTDEC, NK_ID,
+    NK_CHAR_LIT, NK_INT_LIT, NK_UINT_LIT, NK_LONG_LIT, NK_ULONG_LIT,
+    NK_FLOAT_LIT, NK_DOUBLE_LIT, NK_STRING_LIT, NK_ARG,
+    NK_ADDR, NK_DEREF, NK_UPLUS, NK_UMINUS, NK_COMPLEMENT, NK_NOT,
+} NODE_KIND;
+
+typedef enum {
     T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
     T_STRUCT, T_UNION, T_ENUM, T_TYPEDEF_NAME,
@@ -99,6 +114,8 @@ typedef struct type {
     char *tag;
 } TYPE;
 
+extern TYPE g_type_uchar, g_type_int;
+
 typedef struct param {
     struct param *next;
     char *id;
@@ -111,6 +128,14 @@ void add_param(PARAM *top, PARAM *param);
 TYPE *new_type(TYPE_KIND kind, TYPE *typ);
 TYPE *dup_type(TYPE *typ);
 bool equal_type(const TYPE *tl, const TYPE *tr);
+TYPE *type_check_array(const POS *pos, const TYPE *arr, const TYPE *e);
+TYPE *type_check_call(const POS *pos, const TYPE *fn, const TYPE *arg);
+TYPE *type_check_idnode(const POS *pos, NODE_KIND kind,
+                        const TYPE *e, const char *id);
+TYPE *type_check_postfix(const POS *pos, NODE_KIND kind, TYPE *e);
+TYPE *type_check_unary(const POS *pos, NODE_KIND kind, TYPE *e);
+TYPE *type_check_bin(const POS *pos, NODE_KIND kind, TYPE *lhs, TYPE *rhs);
+void type_check_value(const POS *pos, const TYPE *t);
 
 const char *get_type_string(const TYPE *typ);
 void fprint_type(FILE *fp, const TYPE *typ);
@@ -153,24 +178,11 @@ void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab);
 void print_symtab(const SYMTAB *tab);
 void print_global_symtab(void);
 
-typedef enum {
-    NK_COMPOUND, NK_LINK, NK_IF, NK_THEN, NK_SWITCH, NK_CASE, NK_DEFAULT,
-    NK_WHILE, NK_DO, NK_FOR, NK_FOR2, NK_FOR3, NK_GOTO, NK_CONTINUE,
-    NK_BREAK, NK_RETURN, NK_LABEL, NK_EXPR,
-    NK_EXPR_LINK, NK_ASSIGN, NK_AS_MUL, NK_AS_DIV, NK_AS_MOD, NK_AS_ADD,
-    NK_AS_SUB, NK_AS_SHL, NK_AS_SHR, NK_AS_AND, NK_AS_XOR, NK_AS_OR,
-    NK_EQ, NK_NEQ, NK_LT, NK_GT, NK_LE, NK_GE, NK_SHL, NK_SHR, NK_ADD, NK_SUB,
-    NK_MUL, NK_DIV, NK_MOD, NK_CAST, NK_PREINC, NK_PREDEC, NK_SIZEOF,
-    NK_COND, NK_COND2, NK_LOR, NK_LAND, NK_OR, NK_XOR, NK_AND,
-    NK_ARRAY, NK_CALL, NK_DOT, NK_PTR, NK_POSTINC, NK_POSTDEC, NK_ID,
-    NK_CHAR_LIT, NK_INT_LIT, NK_UINT_LIT, NK_LONG_LIT, NK_ULONG_LIT,
-    NK_FLOAT_LIT, NK_DOUBLE_LIT, NK_STRING_LIT, NK_ARG,
-    NK_ADDR, NK_DEREF, NK_UPLUS, NK_UMINUS, NK_COMPLEMENT, NK_NOT,
-} NODE_KIND;
 
 struct node {
     NODE_KIND kind;
     POS pos;
+    TYPE *type;
     union {
         struct {
             NODE *left;
@@ -186,16 +198,20 @@ struct node {
         } idnode;
         int num;
         const char *id;
+        SYMBOL *sym;
     } u;
 };
 
-NODE *new_node(NODE_KIND kind, const POS *pos);
-NODE *new_node1(NODE_KIND kind, const POS *pos, NODE *np);
-NODE *new_node2(NODE_KIND kind, const POS *pos, NODE *left, NODE *right);
-NODE *new_node_num(NODE_KIND kind, const POS *pos, int num);
-NODE *new_node_id(NODE_KIND kind, const POS *pos, const char *id);
-NODE *new_node_idnode(NODE_KIND kind, const POS *pos, NODE *ep, const char *id);
+NODE *new_node(NODE_KIND kind, const POS *pos, TYPE *typ);
+NODE *new_node1(NODE_KIND kind, const POS *pos, TYPE *typ, NODE *np);
+NODE *new_node2(NODE_KIND kind, const POS *pos, TYPE *typ, NODE *left, NODE *right);
+NODE *new_node_num(NODE_KIND kind, const POS *pos, TYPE *typ, int num);
+NODE *new_node_id(NODE_KIND kind, const POS *pos, TYPE *typ, const char *id);
+NODE *new_node_sym(NODE_KIND kind, const POS *pos, TYPE *typ, SYMBOL *sym);
+NODE *new_node_idnode(NODE_KIND kind, const POS *pos, TYPE *typ,
+        NODE *ep, const char *id);
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
+const char *get_node_op_string(NODE_KIND kind);
 void fprint_node(FILE *fp, int indent, const NODE *np);
 void print_node(const NODE *np);
 
