@@ -6,7 +6,6 @@ PARAM *new_param(char *id, TYPE *typ)
     param->next = NULL;
     param->id = id;
     param->type = typ;
-    param->is_register = false;
     return param;
 }
 
@@ -23,7 +22,8 @@ TYPE *new_type(TYPE_KIND kind, TYPE *typ)
 {
     TYPE *tp = (TYPE*) alloc(sizeof (TYPE));
     tp->kind = kind;
-    tp->is_const = false;
+    tp->sclass = SC_DEFAULT;
+    tp->tqual = TQ_DEFAULT;
     tp->type = typ;
     tp->param = NULL;
     tp->tag = NULL;
@@ -34,7 +34,8 @@ TYPE *dup_type(TYPE *typ)
 {
     TYPE *tp = (TYPE*) alloc(sizeof (TYPE));
     tp->kind = typ->kind;
-    tp->is_const = typ->is_const;
+    tp->sclass = typ->sclass;
+    tp->tqual = typ->tqual;
     tp->type = typ->type;
     tp->param = typ->param;
     tp->tag = typ->tag;
@@ -52,7 +53,9 @@ bool equal_type(const TYPE *tl, const TYPE *tr)
         return false;
     if (tl->kind != tr->kind)
         return false;
-    if (tl->is_const != tr->is_const)
+    if (tl->sclass != tr->sclass)
+        return false;
+    if (tl->tqual != tr->tqual)
         return false;
     if (tl->tag != tr->tag)
         return false;
@@ -62,8 +65,6 @@ bool equal_type(const TYPE *tl, const TYPE *tr)
     pr = tr->param;
     while (pl != NULL && pr != NULL) {
         if (!equal_type(pl->type, pr->type))
-            return false;
-        if (pl->is_register != pr->is_register)
             return false;
         pl = pl->next;
         pr = pr->next;
@@ -105,10 +106,21 @@ const char *get_type_string(const TYPE *typ)
     return "?";
 }
 
+const char *get_sclass_string(STORAGE_CLASS sc)
+{
+    switch (sc) {
+    case SC_DEFAULT:    return "SC_DEFAULT";
+    case SC_AUTO:       return "auto";
+    case SC_REGISTER:   return "register";
+    case SC_STATIC:     return "static";
+    case SC_EXTERN:     return "extern";
+    case SC_TYPEDEF:    return "typedef";
+    }
+    return "?";
+}
+
 void fprint_param(FILE *fp, const PARAM *p)
 {
-    if (p->is_register)
-        fprintf(fp, "register ");
     if (p->type == NULL)
         fprintf(fp, " ...");
     else {
@@ -124,8 +136,14 @@ void fprint_type(FILE *fp, const TYPE *typ)
     if (typ == NULL)
         fprintf(fp, "NULL");
     else {
-        if (typ->is_const)
-            fprintf(fp, "const ");
+        if (typ->sclass != SC_DEFAULT)
+            fprintf(fp, "%s ", get_sclass_string(typ->sclass));
+        if (typ->tqual != TQ_DEFAULT) {
+            if (typ->tqual & TQ_CONST)
+                fprintf(fp, "const ");
+            if (typ->tqual & TQ_VOLATILE)
+                fprintf(fp, "volatile ");
+        }
         switch (typ->kind) {
         case T_UNKNOWN:
             fprintf(fp, "UNKNOWN");
@@ -192,7 +210,7 @@ void fprint_type(FILE *fp, const TYPE *typ)
             fprint_type(fp, typ->type);
             break;
         case T_ARRAY:
-            fprintf(fp, "ARRAY of ");
+            fprintf(fp, "ARRAY [] of ");
             fprint_type(fp, typ->type);
             break;
         case T_FUNC:
