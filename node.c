@@ -197,15 +197,19 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprintf(fp, "%*sgoto %s;\n", indent, "", np->u.id);
         break;
     case NK_CONTINUE:
-        fprintf(fp, "%*scontinue;", indent, "");
+        fprintf(fp, "%*scontinue;\n", indent, "");
         break;
     case NK_BREAK:
-        fprintf(fp, "%*sbreak;", indent, "");
+        fprintf(fp, "%*sbreak;\n", indent, "");
         break;
     case NK_RETURN:
         fprintf(fp, "%*sreturn ", indent, "");
         fprint_node(fp, indent, np->u.link.left);
         fprintf(fp, ";\n");
+        break;
+    case NK_LABEL:
+        fprintf(fp, "%*s%s:\n", indent-2, "", np->u.idnode.id);
+        fprint_node(fp, indent, np->u.idnode.node);
         break;
     case NK_EXPR:
         fprintf(fp, "%*s", indent, "");
@@ -281,11 +285,11 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         }
         break;
     case NK_DOT:
-        fprint_node(fp, indent, np->u.link.left);
+        fprint_node(fp, indent, np->u.idnode.node);
         fprintf(fp, ".%s", np->u.idnode.id);
         break;
     case NK_PTR:
-        fprint_node(fp, indent, np->u.link.left);
+        fprint_node(fp, indent, np->u.idnode.node);
         fprintf(fp, "->%s", np->u.idnode.id);
         break;
     case NK_ID:

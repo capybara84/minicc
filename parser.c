@@ -534,7 +534,7 @@ static bool parse_unary_expression(PARSER *pars, NODE **exp)
             return false;
         *exp = new_node1(kind, &pos, *exp);
     } else if (is_token(pars, TK_SIZEOF)) {
-        /*TODO*/
+        /*TODO impl sizeof*/
         next(pars);
         if (is_token(pars, TK_LPAR)) {
             next(pars);
@@ -570,7 +570,7 @@ static bool parse_cast_expression(PARSER *pars, NODE **exp)
     assert(exp);
 
     *exp = NULL;
-    /*
+    /* TODO impl cast
     while (is_token(pars, TK_LPAR)) {
         POS pos = *get_pos(pars);
         next(pars);
@@ -1209,12 +1209,19 @@ static bool parse_statement(PARSER *pars, NODE **node)
         }
         break;
     case TK_ID:
-        /*TODO label node */
         if (is_next_colon(pars->scan)) {
+            char *id = get_id(pars);
             TRACE("parse_statement", "label");
             next(pars);
             if (!expect(pars, TK_COLON))
                 goto fail;
+            {
+                NODE *np = NULL;
+                POS pos = *get_pos(pars);
+                if (!parse_statement(pars, &np))
+                    goto fail;
+                *node = new_node_idnode(NK_LABEL, &pos, np, id);
+            }
             break;
         }
         /*THROUGH*/
@@ -1226,8 +1233,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             if (!is_token(pars, TK_SEMI)) {
                 if (!parse_expression(pars, &e))
                     goto fail;
-            } else
-                e = NULL;
+            }
             if (!expect(pars, TK_SEMI))
                 goto fail;
             *node = new_node1(NK_EXPR, &pos, e);
@@ -1260,7 +1266,7 @@ static bool parse_compound_statement(PARSER *pars, NODE **node)
     if (!expect(pars, TK_BEGIN))
         return false;
     while (is_declaration(pars)) {
-        /* TODO local var */
+        /* TODO impl local decl */
         if (!parse_declaration(pars, false))
             return false;
     }
@@ -1286,7 +1292,7 @@ initializer_list
 */
 static bool parse_initializer_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO impl init */
     ENTER("parse_initializer_list");
     assert(pars);
     if (!parse_initializer(pars))
@@ -1307,7 +1313,7 @@ initializer
 */
 static bool parse_initializer(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO impl init */
     ENTER("parse_initializer");
 
     assert(pars);
@@ -1338,7 +1344,7 @@ init_declarator
 */
 static bool parse_init_declarator(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. init */
     TYPE *typ;
     char *id = NULL;
 
@@ -1366,7 +1372,7 @@ init_declarator_list
 */
 static bool parse_init_declarator_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO impl init*/
     ENTER("parse_init_declarator_list");
 
     assert(pars);
@@ -1401,6 +1407,7 @@ static bool parse_declaration(PARSER *pars, bool parametered)
         return false;
     }
     if (is_init_declarator_list(pars)) {
+        /*TODO impl init */
         if (!parse_init_declarator_list(pars))
             return false;
     }
@@ -1417,8 +1424,7 @@ type_qualifier_list
 type_qualifier
 	= CONST | VOLATILE
 */
-static bool
-parse_type_qualifier_list(PARSER *pars, TYPE *typ)
+static bool parse_type_qualifier_list(PARSER *pars, TYPE *typ)
 {
     ENTER("parse_type_qualifier_list");
     assert(pars);
@@ -1471,7 +1477,7 @@ identifier_list
 */
 static bool parse_identifier_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO impl. */
     ENTER("parse_identifier_list");
 
     assert(pars);
@@ -1536,10 +1542,10 @@ specifier_qualifier_list
 */
 static bool parse_specifier_qualifier_list(PARSER *pars)
 {
+    /*TODO impl. */
     ENTER("parse_specifier_qualifier_list");
     assert(pars);
 
-    /*TODO*/
     if (!is_type_specifier_or_qualifier(pars)) {
         parser_error(pars, "missing type_specifier or type_qualifier");
         return false;
@@ -1564,8 +1570,7 @@ abstract_declarator
                 { '[' [constant_expression] ']'
                     | '(' [parameter_type_list] ')' }
 */
-static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
-                char **id, PARAM **param_list)
+static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp, char **id)
 {
     TYPE *typ = NULL;
     ENTER("parse_abstract_declarator");
@@ -1574,7 +1579,6 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
     assert(pptyp);
     assert(*pptyp);
     assert(id);
-    assert(param_list);
 
     if (is_token(pars, TK_STAR)) {
         if (!parse_pointer(pars, pptyp))
@@ -1585,7 +1589,7 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
     if (!expect(pars, TK_LPAR))
         return false;
     typ = new_type(T_UNKNOWN, NULL);
-    if (!parse_abstract_declarator(pars, &typ, id, param_list))
+    if (!parse_abstract_declarator(pars, &typ, id))
         return false;
     if (!expect(pars, TK_RPAR))
         return false;
@@ -1600,17 +1604,18 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp,
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO size*/
+            /*TODO calc array size (eval const node 'e') */
         } else if (is_token(pars, TK_LPAR)) {
+            PARAM *param_list = NULL;
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars, param_list))
+                if (!parse_parameter_type_list(pars, &param_list))
                     return false;
             }
             if (!expect(pars, TK_RPAR))
                 return false;
             *pptyp = new_type(T_FUNC, *pptyp);
-            (*pptyp)->param = *param_list;
+            (*pptyp)->param = param_list;
         } else
             break;
         if (typ) {
@@ -1638,7 +1643,6 @@ static bool parse_type_name(PARSER *pars)
 {
     TYPE *typ;
     char *id = NULL;
-    PARAM *param_list = NULL;
     ENTER("parse_type_name");
     assert(pars);
 
@@ -1646,7 +1650,7 @@ static bool parse_type_name(PARSER *pars)
         return false;
     if (is_abstract_declarator(pars)) {
         typ = new_type(T_UNKNOWN, NULL);
-        if (!parse_abstract_declarator(pars, &typ, &id, &param_list))
+        if (!parse_abstract_declarator(pars, &typ, &id))
             return false;
     }
     /*TODO return type_name */
