@@ -1,3 +1,1 @@
-int foo() {
-  !1;
-}
+int foo(int (*x)(a,int b));

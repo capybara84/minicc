@@ -13,11 +13,11 @@ test_parser : test_parser.o ../parser.o ../node.o ../symbol.o ../type.o \
 
 scanner_test : test_scanner
 	./test_scanner > test_scanner.output
-	-diff -c test_scanner.result test_scanner.output
+	-diff test_scanner.result test_scanner.output
 
 parser_test : test_parser
 	./test_parser test_parser1.c > test_parser1.output
-	-diff -c test_parser1.result test_parser1.output > test_parser1.diff
+	-diff test_parser1.result test_parser1.output > test_parser1.diff
 	-cat test_parser1.diff
 
 clean:

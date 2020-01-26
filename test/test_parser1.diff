@@ -1,0 +1,10 @@
+5c5
+< SYM a GLOBAL:ARRAY [10] of int
+---
+> SYM a GLOBAL:ARRAY [] of int
+16,17c16,17
+< SYM a0 GLOBAL:ARRAY [10] of POINTER to int
+< SYM a1 GLOBAL:POINTER to ARRAY [10] of int
+---
+> SYM a0 GLOBAL:ARRAY [] of POINTER to int
+> SYM a1 GLOBAL:POINTER to ARRAY [] of int

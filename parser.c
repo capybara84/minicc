@@ -142,7 +142,7 @@ static void parser_error(PARSER *pars, const char *s, ...)
     va_end(ap);
 
     token_name = scan_token_to_string(pars->scan, pars->token);
-    sprintf(buffer2, "%s at token '%s'", buffer, token_name);
+    sprintf(buffer2, "%s (at token '%s')", buffer, token_name);
 
     error(&pars->scan->pos, buffer2);
 }
@@ -1649,7 +1649,7 @@ static bool parse_type_name(PARSER *pars)
         if (!parse_abstract_declarator(pars, &typ, &id, &param_list))
             return false;
     }
-    /*TODO*/
+    /*TODO return type_name */
     LEAVE("parse_type_name");
     return true;
 }
@@ -1657,16 +1657,14 @@ static bool parse_type_name(PARSER *pars)
 
 /*
 parameter_abstract_declarator
-    = [pointer] [IDENTIFIER | '(' parameter_abstract_declarator ')']
+    = [pointer] [IDENTIFIER | '(' parameter_abstract_declarator ')'] 
                 { '[' [constant_expression] ']'
-                    | '(' [parameter_type_list] ')'
-                    | '(' identifier_list ')' }}
+                    | '(' [parameter_type_list] ')' }
 */
 static bool parse_parameter_abstract_declarator(PARSER *pars,
                 TYPE **pptyp, char **id)
 {
     TYPE *typ = NULL;
-    PARAM *param_list = NULL;
     ENTER("parse_parameter_abstract_declarator");
 
     assert(pars);
@@ -1700,20 +1698,18 @@ static bool parse_parameter_abstract_declarator(PARSER *pars,
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO size*/
+            /*TODO calc array size (eval const node 'e') */
         } else if (is_token(pars, TK_LPAR)) {
+            PARAM *param = NULL;
             next(pars);
             if (is_parameter_type_list(pars)) {
-                if (!parse_parameter_type_list(pars, &param_list))
-                    return false;
-            } else if (is_token(pars, TK_ID)) {
-                if (!parse_identifier_list(pars))   /*TODO*/
+                if (!parse_parameter_type_list(pars, &param))
                     return false;
             }
             if (!expect(pars, TK_RPAR))
                 return false;
             *pptyp = new_type(T_FUNC, *pptyp);
-            (*pptyp)->param = param_list;
+            (*pptyp)->param = param;
         } else
             break;
         if (typ) {
@@ -1801,8 +1797,7 @@ declarator
                     | '(' parameter_type_list ')'
                     | '(' [identifier_list] ')' }
 */
-static bool
-parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
+static bool parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
 {
     TYPE *typ = NULL;
     ENTER("parse_declarator");
@@ -1826,9 +1821,8 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
             return false;
         if (!expect(pars, TK_RPAR))
             return false;
-        /* TODO id, param_list */
     } else {
-        parser_error(pars, "need IDENTIFIER or '('");
+        parser_error(pars, "expected identifier or '('");
         return false;
     }
 
@@ -1843,7 +1837,7 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO size*/
+            /*TODO calc array size (eval const node 'e') */
         } else if (is_token(pars, TK_LPAR)) {
             PARAM *param = NULL;
             next(pars);
@@ -1851,7 +1845,7 @@ parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
                 if (!parse_parameter_type_list(pars, &param))
                     return false;
             } else if (is_token(pars, TK_ID)) {
-                /*TODO*/
+                /*TODO Handle old style parameter decl */
                 if (!parse_identifier_list(pars))
                     return false;
             }
@@ -1884,7 +1878,7 @@ struct_declarator
 */
 static bool parse_struct_declarator(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. struct/union */
     TYPE *typ;
     char *id;
 
@@ -1918,7 +1912,7 @@ struct_declarator_list
 */
 static bool parse_struct_declarator_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. struct/union */
     ENTER("parse_struct_declarator_list");
     assert(pars);
 
@@ -1939,7 +1933,7 @@ struct_declaration
 */
 static bool parse_struct_declaration(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. struct/union */
     ENTER("parse_struct_declaration");
     assert(pars);
 
@@ -1959,7 +1953,7 @@ struct_declaration_list
 */
 static bool parse_struct_declaration_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. struct/union */
     ENTER("parse_struct_declaration_list");
     assert(pars);
 
@@ -1982,7 +1976,7 @@ struct_or_union
 */
 static bool parse_struct_or_union_specifier(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. struct/union */
     ENTER("parse_struct_or_union_specifier");
     assert(pars);
 
@@ -2009,7 +2003,7 @@ enumerator
 */
 static bool parse_enumerator(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. enum*/
     ENTER("parse_enumerator");
     assert(pars);
 
@@ -2032,7 +2026,7 @@ enumerator_list
 */
 static bool parse_enumerator_list(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. enum*/
     ENTER("parse_enumerator_list");
     assert(pars);
 
@@ -2054,7 +2048,7 @@ enum_specifier
 */
 static bool parse_enum_specifier(PARSER *pars)
 {
-    /*TODO*/
+    /*TODO Impl. enum*/
     ENTER("parse_enum_specifier");
     assert(pars);
 
@@ -2254,14 +2248,14 @@ static bool parse_declaration_specifier(PARSER *pars,
         if (typ->kind != T_UNKNOWN)
             goto cannot_combine_decl_spec;
         typ->kind = T_TYPEDEF_NAME;
-        /*TODO*/
+        /*TODO Impl. typedef */
         break;
     case TK_STRUCT:
     case TK_UNION:
         if (typ->kind != T_UNKNOWN)
             combine_error = true;
         typ->kind = is_token(pars, TK_STRUCT) ? T_STRUCT : T_UNION;
-        /*TODO*/
+        /*TODO Impl. struct/union */
         if (!parse_struct_or_union_specifier(pars))
             return false;
         if (combine_error)
@@ -2271,7 +2265,7 @@ static bool parse_declaration_specifier(PARSER *pars,
         if (typ->kind != T_UNKNOWN)
             combine_error = true;
         typ->kind = T_ENUM;
-        /*TODO*/
+        /*TODO Impl. enum */
         if (!parse_enum_specifier(pars))
             return false;
         if (combine_error)
@@ -2376,10 +2370,13 @@ static bool parse_external_declaration(PARSER *pars)
                 if (sym->kind == SK_FUNC && ntyp->kind == T_FUNC) {
                     if (!equal_type(sym->type, ntyp))
                         parser_error(pars, "conflicting types for '%s'", id);
-                } else if (sym->kind == SK_FUNC)
+                } else if (sym->kind == SK_FUNC) {
                     parser_error(pars, "'%s' different kind of symbol", id);
-                else
-                    parser_error(pars, "'%s' duplicated", id);/*TODO*/
+                } else {
+                    /*TODO I think duplication declration is an error,
+                        but GCC says it is not. */
+                    parser_error(pars, "'%s' duplicated", id);
+                }
             } else {
                 sym = new_symbol((ntyp->kind == T_FUNC) ? SK_FUNC : SK_GLOBAL,
                                     id, ntyp);
@@ -2389,7 +2386,7 @@ static bool parse_external_declaration(PARSER *pars)
                 next(pars);
                 if (!parse_initializer(pars))
                     return false;
-                /*TODO*/
+                /*TODO Handle initial value */
             }
             if (!is_token(pars, TK_COMMA))
                 break;
@@ -2411,20 +2408,20 @@ static bool parse_external_declaration(PARSER *pars)
         if (sym->kind != SK_FUNC)
             parser_error(pars, "invalid function syntax");
         for (;;) {
-            /*TODO*/
+            /*TODO Handle old style parameter decl syntax */
             if (is_declaration(pars)) {
                 if (!parse_declaration(pars, true))
                     return false;
             } else
                 break;
         }
-        /*
-        if (sym->has_body) error
-        */
+        if (sym->body != NULL) {
+            parser_error(pars, "redefinition of '%s'", sym->id);
+        }
         enter_function(sym);
         for (p = sym->type->param; p != NULL; p = p->next) {
             new_symbol(SK_PARAM, p->id, p->type);
-            /* calc offset ? */
+            /*TODO calc offset of parameter */
         }
         if (!parse_compound_statement(pars, &np))
             return false;
