@@ -25,8 +25,7 @@ void term_symtab(void)
 }
 
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
-                    const char *id, TYPE *type)
+SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type)
 {
     SYMBOL *p;
 
@@ -40,9 +39,7 @@ SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
         current_symtab->tail->next = p;
         current_symtab->tail = p;
     }
-    p->sclass = sc;
     p->kind = kind;
-    p->is_volatile = (tq == TQ_VOLATILE);
     p->id = id;
     p->type = type;
     p->tab = NULL;
@@ -100,25 +97,10 @@ const char *get_sym_kind_string(SYMBOL_KIND kind)
     return NULL;
 }
 
-const char *get_sclass_string(STORAGE_CLASS sc)
-{
-    switch (sc) {
-    case SC_DEFAULT:    return "DEFAULT";
-    case SC_AUTO:       return "AUTO";
-    case SC_REGISTER:   return "REGISTER";
-    case SC_STATIC:     return "STATIC";
-    case SC_EXTERN:     return "EXTERN";
-    case SC_TYPEDEF:    return "TYPEDEF";
-    }
-    return NULL;
-}
-
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
 {
-    fprintf(fp, "%*sSYM %s %s %s%s:", indent, "",
-        sym->id, get_sym_kind_string(sym->kind),
-                get_sclass_string(sym->sclass),
-        (sym->is_volatile) ? " volatile" : "");
+    fprintf(fp, "%*sSYM %s %s:", indent, "",
+            sym->id, get_sym_kind_string(sym->kind));
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
     if (sym->kind == SK_FUNC) {

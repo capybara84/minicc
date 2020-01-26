@@ -80,9 +80,20 @@ typedef enum {
     T_SIGNED, T_UNSIGNED,
 } TYPE_KIND;
 
+typedef enum {
+    SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN, SC_TYPEDEF,
+} STORAGE_CLASS;
+
+typedef enum {
+    TQ_DEFAULT      = 0x0,
+    TQ_CONST        = 0x1,
+    TQ_VOLATILE     = 0x2,
+} TYPE_QUALIFIER;
+
 typedef struct type {
     TYPE_KIND kind;
-    bool is_const;
+    STORAGE_CLASS sclass;
+    TYPE_QUALIFIER tqual;
     struct type *type;
     struct param *param;
     char *tag;
@@ -92,7 +103,6 @@ typedef struct param {
     struct param *next;
     char *id;
     TYPE *type;
-    bool is_register;
 } PARAM;
 
 PARAM *new_param(char *id, TYPE *typ);
@@ -107,14 +117,6 @@ void fprint_type(FILE *fp, const TYPE *typ);
 void print_type(const TYPE *typ);
 
 typedef enum {
-    SC_DEFAULT, SC_AUTO, SC_REGISTER, SC_STATIC, SC_EXTERN, SC_TYPEDEF,
-} STORAGE_CLASS;
-
-typedef enum {
-    TQ_DEFAULT, TQ_CONST, TQ_VOLATILE,
-} TYPE_QUALIFIER;
-
-typedef enum {
     SK_LOCAL, SK_GLOBAL, SK_PARAM, SK_FUNC,
 } SYMBOL_KIND;
 
@@ -124,9 +126,7 @@ typedef struct node NODE;
 
 struct symbol {
     SYMBOL *next;
-    STORAGE_CLASS sclass;
     SYMBOL_KIND kind;
-    bool is_volatile;
     const char *id;
     TYPE *type;
     SYMTAB *tab;
@@ -139,8 +139,7 @@ struct symtab {
     struct symtab *up;
 };
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, STORAGE_CLASS sc, TYPE_QUALIFIER tq,
-                    const char *id, TYPE *type);
+SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type);
 SYMBOL *lookup_symbol(const char *id);
 
 bool init_symtab(void);

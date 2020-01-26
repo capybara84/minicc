@@ -1,28 +1,27 @@
 GLOBAL SYMTAB
-SYM i GLOBAL DEFAULT:int
-SYM j GLOBAL DEFAULT:int
-SYM c GLOBAL DEFAULT:uchar
-SYM a GLOBAL DEFAULT:ARRAY [10] of int
-SYM p GLOBAL DEFAULT:POINTER to ulong
-SYM foo FUNC DEFAULT:FUNC void (void)
+SYM i GLOBAL:int
+SYM j GLOBAL:int
+SYM c GLOBAL:uchar
+SYM a GLOBAL:ARRAY [] of int
+SYM p GLOBAL:POINTER to ulong
+SYM foo FUNC:FUNC void (void)
 {
 }
-SYM main FUNC DEFAULT:FUNC int (int argc, ARRAY of POINTER to uchar argv)
+SYM main FUNC:FUNC int (int argc, ARRAY [] of POINTER to uchar argv)
 {
 }
-SYM c0 GLOBAL DEFAULT:POINTER to const int
-SYM c1 GLOBAL DEFAULT:const POINTER to int
-SYM c2 GLOBAL DEFAULT:const POINTER to const int
-SYM a0 GLOBAL DEFAULT:ARRAY [10] of POINTER to int
-SYM a1 GLOBAL DEFAULT:POINTER to ARRAY [10] of int
-SYM sca GLOBAL STATIC:ushort
-SYM scb GLOBAL EXTERN:double
-SYM cvi GLOBAL DEFAULT volatile:const int
-SYM vci GLOBAL DEFAULT volatile:const int
-SYM cci GLOBAL DEFAULT:const int
-SYM vvi GLOBAL DEFAULT volatile:int
-SYM vcvi GLOBAL DEFAULT volatile:const int
-SYM bar FUNC DEFAULT:FUNC void (volatile int x, const int y, volatile const int z)
+SYM c0 GLOBAL:POINTER to const int
+SYM c1 GLOBAL:const POINTER to int
+SYM c2 GLOBAL:const POINTER to const int
+SYM a0 GLOBAL:ARRAY [] of POINTER to int
+SYM a1 GLOBAL:POINTER to ARRAY [] of int
+SYM sca GLOBAL:static ushort
+SYM scb GLOBAL:extern double
+SYM cvi GLOBAL:const volatile int
+SYM vci GLOBAL:const volatile int
+SYM cci GLOBAL:const int
+SYM vvi GLOBAL:volatile int
+SYM vcvi GLOBAL:const volatile int
+SYM bar FUNC:FUNC void (volatile int x, const int y, const volatile int z)
 {
 }
-

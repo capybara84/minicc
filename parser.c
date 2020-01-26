@@ -1286,6 +1286,7 @@ initializer_list
 */
 static bool parse_initializer_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_initializer_list");
     assert(pars);
     if (!parse_initializer(pars))
@@ -1306,6 +1307,7 @@ initializer
 */
 static bool parse_initializer(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_initializer");
 
     assert(pars);
@@ -1336,6 +1338,7 @@ init_declarator
 */
 static bool parse_init_declarator(PARSER *pars)
 {
+    /*TODO*/
     TYPE *typ;
     char *id = NULL;
 
@@ -1348,6 +1351,7 @@ static bool parse_init_declarator(PARSER *pars)
         return false;
     if (is_token(pars, TK_ASSIGN)) {
         next(pars);
+        /*TODO*/
         if (!parse_initializer(pars))
             return false;
     }
@@ -1362,6 +1366,7 @@ init_declarator_list
 */
 static bool parse_init_declarator_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_init_declarator_list");
 
     assert(pars);
@@ -1378,8 +1383,7 @@ static bool parse_init_declarator_list(PARSER *pars)
 }
 
 static bool parse_declaration_specifiers(PARSER *pars,
-                bool file_scoped, bool parametered,
-                TYPE **typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq);
+                bool file_scoped, bool parametered, TYPE *typ);
 
 /*
 declaration
@@ -1388,15 +1392,12 @@ declaration
 static bool parse_declaration(PARSER *pars, bool parametered)
 {
     TYPE *typ = new_type(T_UNKNOWN, NULL);
-    STORAGE_CLASS sc = SC_DEFAULT;
-    TYPE_QUALIFIER tq = TQ_DEFAULT;
 
     ENTER("parse_declaration");
 
     assert(pars);
 
-    if (!parse_declaration_specifiers(pars, false,
-                    parametered, &typ, &sc, &tq)) {
+    if (!parse_declaration_specifiers(pars, false, parametered, typ)) {
         return false;
     }
     if (is_init_declarator_list(pars)) {
@@ -1417,18 +1418,16 @@ type_qualifier
 	= CONST | VOLATILE
 */
 static bool
-parse_type_qualifier_list(PARSER *pars, TYPE *typ, TYPE_QUALIFIER *ptq)
+parse_type_qualifier_list(PARSER *pars, TYPE *typ)
 {
     ENTER("parse_type_qualifier_list");
     assert(pars);
     assert(typ);
-    assert(ptq);
     while (is_token(pars, TK_CONST) || is_token(pars, TK_VOLATILE)) {
         if (is_token(pars, TK_CONST)) {
-            *ptq = TQ_CONST;
-            typ->is_const = true;
+            typ->tqual |= TQ_CONST;
         } else {
-            *ptq = TQ_VOLATILE;
+            typ->tqual |= TQ_VOLATILE;
         }
         next(pars);
     }
@@ -1442,8 +1441,6 @@ pointer
 */
 static bool parse_pointer(PARSER *pars, TYPE **pptyp)
 {
-    TYPE_QUALIFIER tq = TQ_DEFAULT;
-
     ENTER("parse_pointer");
 
     assert(pars);
@@ -1454,12 +1451,12 @@ static bool parse_pointer(PARSER *pars, TYPE **pptyp)
 
     *pptyp = new_type(T_POINTER, *pptyp);
 
-    if (!parse_type_qualifier_list(pars, *pptyp, &tq))
+    if (!parse_type_qualifier_list(pars, *pptyp))
         return false;
     while (is_token(pars, TK_STAR)) {
         next(pars);
         *pptyp = new_type(T_POINTER, *pptyp);
-        if (!parse_type_qualifier_list(pars, *pptyp, &tq))
+        if (!parse_type_qualifier_list(pars, *pptyp))
             return false;
     }
 
@@ -1474,6 +1471,7 @@ identifier_list
 */
 static bool parse_identifier_list(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_identifier_list");
 
     assert(pars);
@@ -1500,6 +1498,7 @@ type_qualifier
 */
 static bool parse_type_specifier_or_qualifier(PARSER *pars)
 {
+    /*TODO*/
     ENTER("parse_type_specifier_or_qualifier");
     assert(pars);
 
@@ -1540,6 +1539,7 @@ static bool parse_specifier_qualifier_list(PARSER *pars)
     ENTER("parse_specifier_qualifier_list");
     assert(pars);
 
+    /*TODO*/
     if (!is_type_specifier_or_qualifier(pars)) {
         parser_error(pars, "missing type_specifier or type_qualifier");
         return false;
@@ -1649,6 +1649,7 @@ static bool parse_type_name(PARSER *pars)
         if (!parse_abstract_declarator(pars, &typ, &id, &param_list))
             return false;
     }
+    /*TODO*/
     LEAVE("parse_type_name");
     return true;
 }
@@ -1739,8 +1740,6 @@ parameter_declaration
 static bool parse_parameter_declaration(PARSER *pars, PARAM **param)
 {
     TYPE *typ;
-    STORAGE_CLASS sc = SC_DEFAULT;
-    TYPE_QUALIFIER tq = TQ_DEFAULT;
     char *id = NULL;
 
     ENTER("parse_parameter_declaration");
@@ -1750,15 +1749,14 @@ static bool parse_parameter_declaration(PARSER *pars, PARAM **param)
 
     typ = new_type(T_UNKNOWN, NULL);
 
-    if (!parse_declaration_specifiers(pars, false, true, &typ, &sc, &tq))
+    if (!parse_declaration_specifiers(pars, false, true, typ))
         return false;
-    if (sc != SC_DEFAULT && sc != SC_REGISTER) {
+    if (typ->sclass != SC_DEFAULT && typ->sclass != SC_REGISTER) {
         parser_error(pars, "invalid storage class for parameter");
     }
     if (!parse_parameter_abstract_declarator(pars, &typ, &id))
         return false;
     *param = new_param(id, typ);
-    (*param)->is_register = (sc == SC_REGISTER);
     LEAVE("parse_parameter_declaration");
     return true;
 }
@@ -1771,17 +1769,15 @@ parameter_list
 */
 static bool parse_parameter_type_list(PARSER *pars, PARAM **param_list)
 {
-    PARAM *param;
-
     ENTER("parse_parameter_type_list");
 
     assert(pars);
     assert(param_list);
 
-    if (!parse_parameter_declaration(pars, &param))
+    if (!parse_parameter_declaration(pars, param_list))
         return false;
-    *param_list = param;
     while (is_token(pars, TK_COMMA)) {
+        PARAM *param = NULL;
         next(pars);
         if (is_token(pars, TK_ELLIPSIS)) {
             next(pars);
@@ -2094,13 +2090,13 @@ type_qualifier
 	= CONST | VOLATILE
 */
 static bool parse_declaration_specifier(PARSER *pars,
-                bool file_scoped, bool parametered,
-                TYPE *typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq)
+                bool file_scoped, bool parametered, TYPE *typ)
 {
     bool combine_error = false;
     ENTER("parse_declaration_specifier");
 
     assert(pars);
+    assert(typ);
 
     switch (pars->token) {
     case TK_AUTO:
@@ -2109,51 +2105,51 @@ static bool parse_declaration_specifier(PARSER *pars,
             goto illegal_sc_on_file_scoped;
         if (parametered)
             goto invalid_in_func_decl;
-        if (*psc == SC_AUTO)
+        if (typ->sclass == SC_AUTO)
             goto dup_warning;
-        if (*psc != SC_DEFAULT)
+        if (typ->sclass != SC_DEFAULT)
             goto cannot_combine_decl_spec;
-        *psc = SC_AUTO;
+        typ->sclass = SC_AUTO;
         break;
     case TK_REGISTER:
         next(pars);
         if (file_scoped)
             goto illegal_sc_on_file_scoped;
-        if (*psc == SC_REGISTER)
+        if (typ->sclass == SC_REGISTER)
             goto dup_warning;
-        if (*psc != SC_DEFAULT)
+        if (typ->sclass != SC_DEFAULT)
             goto cannot_combine_decl_spec;
-        *psc = SC_REGISTER;
+        typ->sclass = SC_REGISTER;
         break;
     case TK_STATIC:
         next(pars);
         if (parametered)
             goto invalid_in_func_decl;
-        if (*psc == SC_STATIC)
+        if (typ->sclass == SC_STATIC)
             goto dup_warning;
-        if (*psc != SC_DEFAULT)
+        if (typ->sclass != SC_DEFAULT)
             goto cannot_combine_decl_spec;
-        *psc = SC_STATIC;
+        typ->sclass = SC_STATIC;
         break;
     case TK_EXTERN:
         next(pars);
         if (parametered)
             goto invalid_in_func_decl;
-        if (*psc == SC_EXTERN)
+        if (typ->sclass == SC_EXTERN)
             goto dup_warning;
-        if (*psc != SC_DEFAULT)
+        if (typ->sclass != SC_DEFAULT)
             goto cannot_combine_decl_spec;
-        *psc = SC_EXTERN;
+        typ->sclass = SC_EXTERN;
         break;
     case TK_TYPEDEF:
         next(pars);
         if (parametered)
             goto invalid_in_func_decl;
-        if (*psc == SC_TYPEDEF)
+        if (typ->sclass == SC_TYPEDEF)
             goto dup_warning;
-        if (*psc != SC_DEFAULT)
+        if (typ->sclass != SC_DEFAULT)
             goto cannot_combine_decl_spec;
-        *psc = SC_TYPEDEF;
+        typ->sclass = SC_TYPEDEF;
         break;
     case TK_VOID:
         next(pars);
@@ -2283,20 +2279,11 @@ static bool parse_declaration_specifier(PARSER *pars,
         break;
     case TK_CONST:
         next(pars);
-        /*
-        if (*ptq != TQ_DEFAULT)
-            goto cannot_combine_decl_spec;
-        */
-        *ptq = TQ_CONST;
-        typ->is_const = true;
+        typ->tqual |= TQ_CONST;
         break;
     case TK_VOLATILE:
         next(pars);
-        /*
-        if (*ptq != TQ_DEFAULT)
-            goto cannot_combine_decl_spec;
-        */
-        *ptq = TQ_VOLATILE;
+        typ->tqual |= TQ_VOLATILE;
         break;
     default:
         parser_error(pars, "syntax error");
@@ -2326,20 +2313,17 @@ declaration_specifiers
     = declaration_specifier {declaration_specifier}
 */
 static bool parse_declaration_specifiers(PARSER *pars,
-                bool file_scoped, bool parametered,
-                TYPE **typ, STORAGE_CLASS *psc, TYPE_QUALIFIER *ptq)
+                bool file_scoped, bool parametered, TYPE *typ)
 {
     ENTER("parse_declaration_specifiers");
 
     assert(pars);
 
-    if (!parse_declaration_specifier(pars, file_scoped, parametered,
-                *typ, psc, ptq))
+    if (!parse_declaration_specifier(pars, file_scoped, parametered, typ))
         return false;
 
     while (is_declaration_specifier(pars)) {
-        if (!parse_declaration_specifier(pars, file_scoped, parametered,
-                    *typ, psc, ptq))
+        if (!parse_declaration_specifier(pars, file_scoped, parametered, typ))
             return false;
     }
 
@@ -2356,8 +2340,6 @@ external_declaration
 static bool parse_external_declaration(PARSER *pars)
 {
     TYPE *typ;
-    STORAGE_CLASS sc = SC_DEFAULT;
-    TYPE_QUALIFIER tq = TQ_DEFAULT;
     int count = 0;
     SYMBOL *sym = NULL;
     NODE *np = NULL;
@@ -2369,7 +2351,7 @@ static bool parse_external_declaration(PARSER *pars)
     typ = new_type(T_UNKNOWN, NULL);
 
     if (is_declaration_specifiers(pars)) {
-        if (!parse_declaration_specifiers(pars, true, false, &typ, &sc, &tq))
+        if (!parse_declaration_specifiers(pars, true, false, typ))
             return false;
         if (typ->kind == T_SIGNED)
             typ->kind = T_INT;
@@ -2400,7 +2382,7 @@ static bool parse_external_declaration(PARSER *pars)
                     parser_error(pars, "'%s' duplicated", id);/*TODO*/
             } else {
                 sym = new_symbol((ntyp->kind == T_FUNC) ? SK_FUNC : SK_GLOBAL,
-                                    sc, tq, id, ntyp);
+                                    id, ntyp);
             }
 
             if (is_token(pars, TK_ASSIGN)) {
@@ -2441,7 +2423,7 @@ static bool parse_external_declaration(PARSER *pars)
         */
         enter_function(sym);
         for (p = sym->type->param; p != NULL; p = p->next) {
-            new_symbol(SK_PARAM, sc, tq, p->id, p->type);
+            new_symbol(SK_PARAM, p->id, p->type);
             /* calc offset ? */
         }
         if (!parse_compound_statement(pars, &np))
