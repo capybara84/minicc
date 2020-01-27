@@ -137,6 +137,7 @@ TYPE *type_check_postfix(const POS *pos, NODE_KIND kind, TYPE *e);
 TYPE *type_check_unary(const POS *pos, NODE_KIND kind, TYPE *e);
 TYPE *type_check_bin(const POS *pos, NODE_KIND kind, TYPE *lhs, TYPE *rhs);
 void type_check_value(const POS *pos, const TYPE *t);
+void type_check_integer(const POS *pos, const TYPE *t);
 
 const char *get_type_string(const TYPE *typ);
 void fprint_type(FILE *fp, const TYPE *typ);

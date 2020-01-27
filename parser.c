@@ -418,6 +418,7 @@ static bool parse_primary_expression(PARSER *pars, NODE **exp)
     case TK_STRING_LIT:
         TRACE("parse_primary_expression", "STRING_LIT");
         /*TODO impl string literal*/
+        assert(0);
         next(pars);
         break;
     case TK_UINT_LIT:
@@ -1124,8 +1125,7 @@ static bool parse_statement(PARSER *pars, NODE **node, int scope)
                 goto fail;
             if (!parse_expression(pars, &e))
                 goto fail;
-            type_check_value(&pos, e->type);
-            /*TODO check number */
+            type_check_integer(&pos, e->type);
             if (!expect(pars, TK_RPAR))
                 goto fail;
             if (!parse_statement(pars, &b, scope))

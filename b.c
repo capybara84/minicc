@@ -1,13 +1,7 @@
-#include <stdio.h>
-
-int foo(char *p, int n)
+void foo()
 {
-    if (p == 1)
-        return 1;
-    return 0;
-}
-
-int main()
-{
+    switch ("abc") {
+        break;
+    }
     return 0;
 }

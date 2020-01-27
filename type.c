@@ -412,8 +412,12 @@ TYPE *type_check_bin(const POS *pos, NODE_KIND kind,
 
 void type_check_value(const POS *pos, const TYPE *t)
 {
-    /*TODO impl */
-    /* check not void */
+    /*TODO  check not void */
+}
+
+void type_check_integer(const POS *pos, const TYPE *t)
+{
+    /*TODO check integer */
 }
 
 const char *get_type_string(const TYPE *typ)
