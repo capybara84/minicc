@@ -1,4 +1,5 @@
 GLOBAL SYMTAB
+scope:0
 SYM i GLOBAL:int
 SYM j GLOBAL:int
 SYM c GLOBAL:uchar
