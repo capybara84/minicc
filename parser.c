@@ -1454,6 +1454,15 @@ static bool parse_declaration(PARSER *pars, bool is_parameter)
     if (!parse_declaration_specifiers(pars, false, is_parameter, typ)) {
         return false;
     }
+    if (typ->kind == T_SIGNED)
+        typ->kind = T_INT;
+    else if (typ->kind == T_UNSIGNED)
+        typ->kind = T_UINT;
+    if (typ->kind == T_UNKNOWN) {
+        parser_warning(pars, "type specifier missing, defaults to 'int'");
+        typ->kind = T_INT;
+    }
+
     if (is_init_declarator_list(pars)) {
         /*TODO impl init */
         if (!parse_init_declarator_list(pars))
