@@ -1296,7 +1296,7 @@ fail:
     return false;
 }
 
-static bool parse_declaration(PARSER *pars, bool parametered);
+static bool parse_declaration(PARSER *pars, bool is_parameter);
 
 /*
 compound_statement
@@ -1437,13 +1437,13 @@ static bool parse_init_declarator_list(PARSER *pars)
 }
 
 static bool parse_declaration_specifiers(PARSER *pars,
-                bool file_scoped, bool parametered, TYPE *typ);
+                bool file_scoped, bool is_parameter, TYPE *typ);
 
 /*
 declaration
 	= declaration_specifiers [init_declarator_list] ';'
 */
-static bool parse_declaration(PARSER *pars, bool parametered)
+static bool parse_declaration(PARSER *pars, bool is_parameter)
 {
     TYPE *typ = new_type(T_UNKNOWN, NULL);
 
@@ -1451,7 +1451,7 @@ static bool parse_declaration(PARSER *pars, bool parametered)
 
     assert(pars);
 
-    if (!parse_declaration_specifiers(pars, false, parametered, typ)) {
+    if (!parse_declaration_specifiers(pars, false, is_parameter, typ)) {
         return false;
     }
     if (is_init_declarator_list(pars)) {
@@ -2136,7 +2136,7 @@ type_qualifier
 	= CONST | VOLATILE
 */
 static bool parse_declaration_specifier(PARSER *pars,
-                bool file_scoped, bool parametered, TYPE *typ)
+                bool file_scoped, bool is_parameter, TYPE *typ)
 {
     bool combine_error = false;
     ENTER("parse_declaration_specifier");
@@ -2149,7 +2149,7 @@ static bool parse_declaration_specifier(PARSER *pars,
         next(pars);
         if (file_scoped)
             goto illegal_sc_on_file_scoped;
-        if (parametered)
+        if (is_parameter)
             goto invalid_in_func_decl;
         if (typ->sclass == SC_AUTO)
             goto dup_warning;
@@ -2169,7 +2169,7 @@ static bool parse_declaration_specifier(PARSER *pars,
         break;
     case TK_STATIC:
         next(pars);
-        if (parametered)
+        if (is_parameter)
             goto invalid_in_func_decl;
         if (typ->sclass == SC_STATIC)
             goto dup_warning;
@@ -2179,7 +2179,7 @@ static bool parse_declaration_specifier(PARSER *pars,
         break;
     case TK_EXTERN:
         next(pars);
-        if (parametered)
+        if (is_parameter)
             goto invalid_in_func_decl;
         if (typ->sclass == SC_EXTERN)
             goto dup_warning;
@@ -2189,7 +2189,7 @@ static bool parse_declaration_specifier(PARSER *pars,
         break;
     case TK_TYPEDEF:
         next(pars);
-        if (parametered)
+        if (is_parameter)
             goto invalid_in_func_decl;
         if (typ->sclass == SC_TYPEDEF)
             goto dup_warning;
@@ -2359,17 +2359,17 @@ declaration_specifiers
     = declaration_specifier {declaration_specifier}
 */
 static bool parse_declaration_specifiers(PARSER *pars,
-                bool file_scoped, bool parametered, TYPE *typ)
+                bool file_scoped, bool is_parameter, TYPE *typ)
 {
     ENTER("parse_declaration_specifiers");
 
     assert(pars);
 
-    if (!parse_declaration_specifier(pars, file_scoped, parametered, typ))
+    if (!parse_declaration_specifier(pars, file_scoped, is_parameter, typ))
         return false;
 
     while (is_declaration_specifier(pars)) {
-        if (!parse_declaration_specifier(pars, file_scoped, parametered, typ))
+        if (!parse_declaration_specifier(pars, file_scoped, is_parameter, typ))
             return false;
     }
 
