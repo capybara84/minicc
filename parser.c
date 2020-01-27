@@ -406,7 +406,13 @@ static bool parse_primary_expression(PARSER *pars, NODE **exp)
         break;
     case TK_INT_LIT:
         TRACE("parse_primary_expression", "INT_LIT");
-        *exp = new_node_num(NK_INT_LIT, &pos, &g_type_int, get_int_lit(pars));
+        {
+            int n = get_int_lit(pars);
+            if (n == 0)
+                *exp = new_node_num(NK_INT_LIT, &pos, &g_type_null, 0);
+            else
+                *exp = new_node_num(NK_INT_LIT, &pos, &g_type_int, n);
+        }
         next(pars);
         break;
     case TK_STRING_LIT:
@@ -1119,11 +1125,12 @@ static bool parse_statement(PARSER *pars, NODE **node, int scope)
             if (!parse_expression(pars, &e))
                 goto fail;
             type_check_value(&pos, e->type);
+            /*TODO check number */
             if (!expect(pars, TK_RPAR))
                 goto fail;
             if (!parse_statement(pars, &b, scope))
                 goto fail;
-            /*TODO check case value (unique and exclusive */
+            /*TODO check case value (unique and exclusive) */
             *node = new_node2(NK_SWITCH, &pos, NULL, e, b);
         }
         break;

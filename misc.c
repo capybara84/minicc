@@ -56,6 +56,14 @@ void vwarning(const POS *pos, const char *s, va_list ap)
     s_n_warning++;
 }
 
+void warning(const POS *pos, const char *s, ...)
+{
+    va_list ap;
+    va_start(ap, s);
+    vwarning(pos, s, ap);
+    va_end(ap);
+}
+
 void verror(const POS *pos, const char *s, va_list ap)
 {
     fprintf(ERR_OUT, "%s(%d): error: ", pos->filename, pos->line);

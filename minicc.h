@@ -29,6 +29,7 @@ int get_num_errors(void);
 int get_num_warning(void);
 void vwarning(const POS *pos, const char *s, va_list arg);
 void verror(const POS *pos, const char *s, va_list arg);
+void warning(const POS *pos, const char *s, ...);
 void error(const POS *pos, const char *s, ...);
 
 void *alloc(size_t size);
@@ -114,7 +115,7 @@ typedef struct type {
     char *tag;
 } TYPE;
 
-extern TYPE g_type_uchar, g_type_int;
+extern TYPE g_type_null, g_type_uchar, g_type_int;
 
 typedef struct param {
     struct param *next;

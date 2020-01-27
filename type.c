@@ -1,5 +1,6 @@
 #include "minicc.h"
 
+TYPE g_type_null = { T_NULL, SC_DEFAULT, TQ_DEFAULT, NULL, NULL, NULL };
 TYPE g_type_uchar = { T_UCHAR, SC_DEFAULT, TQ_DEFAULT, NULL, NULL, NULL };
 TYPE g_type_int = { T_INT, SC_DEFAULT, TQ_DEFAULT, NULL, NULL, NULL };
 
@@ -77,15 +78,214 @@ bool equal_type(const TYPE *tl, const TYPE *tr)
     return true;
 }
 
+static bool is_null_type(const TYPE *t)
+{
+    assert(t);
+    return (t->kind == T_NULL);
+}
+
+static bool is_pointer_type(const TYPE *t)
+{
+    assert(t);
+    return (t->kind == T_POINTER);
+}
+
+static bool is_integer_type(const TYPE *t)
+{
+    assert(t);
+    switch (t->kind) {
+    case T_NULL:
+    case T_CHAR:
+    case T_UCHAR:
+    case T_SHORT:
+    case T_USHORT:
+    case T_INT:
+    case T_UINT:
+    case T_LONG:
+    case T_ULONG:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+static bool is_real_type(const TYPE *t)
+{
+    return t->kind == T_FLOAT || t->kind == T_DOUBLE;
+}
+
+static bool is_number_type(const TYPE *t)
+{
+    assert(t);
+    if (is_integer_type(t) || is_real_type(t))
+        return true;
+    return false;
+}
+
+static TYPE *implicit_conv(TYPE *lhs, TYPE *rhs)
+{
+    assert(lhs);
+    assert(rhs);
+    assert(is_number_type(lhs));
+    assert(is_number_type(rhs));
+    if (lhs->kind == rhs->kind)
+        return lhs;
+    if (is_integer_type(lhs) && is_real_type(rhs))
+        return rhs;
+    if (is_real_type(lhs) && is_integer_type(rhs))
+        return lhs;
+    if (is_real_type(lhs) && is_real_type(rhs)) {
+        if (lhs->kind == T_DOUBLE)
+            return lhs;
+        if (rhs->kind == T_DOUBLE)
+            return rhs;
+        return lhs;
+    }
+    switch (lhs->kind) {
+    case T_NULL:
+        return rhs;
+    case T_CHAR:
+        switch (rhs->kind) {
+        case T_NULL:
+            return lhs;
+        case T_UCHAR:
+        case T_SHORT:
+        case T_USHORT:
+        case T_INT:
+        case T_UINT:
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_UCHAR:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+            return lhs;
+        case T_SHORT:
+        case T_USHORT:
+        case T_INT:
+        case T_UINT:
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_SHORT:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+        case T_UCHAR:
+            return lhs;
+        case T_USHORT:
+        case T_INT:
+        case T_UINT:
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_USHORT:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+        case T_UCHAR:
+        case T_SHORT:
+            return lhs;
+        case T_INT:
+        case T_UINT:
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_INT:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+        case T_UCHAR:
+        case T_SHORT:
+        case T_USHORT:
+            return lhs;
+        case T_UINT:
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_UINT:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+        case T_UCHAR:
+        case T_SHORT:
+        case T_USHORT:
+        case T_INT:
+            return lhs;
+        case T_LONG:
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_LONG:
+        switch (rhs->kind) {
+        case T_NULL:
+        case T_CHAR:
+        case T_UCHAR:
+        case T_SHORT:
+        case T_USHORT:
+        case T_INT:
+        case T_UINT:
+            return lhs;
+        case T_ULONG:
+            return rhs;
+        default:
+            assert(0);
+            break;
+        }
+        break;
+    case T_ULONG:
+        return lhs;
+    default:
+        assert(0);
+        break;
+    }
+    return lhs;
+}
+
 TYPE *type_check_array(const POS *pos, const TYPE *arr, const TYPE *e)
 {
     /*TODO impl */
+    /* check arr is array type */
+    /* check e is number type */
     return &g_type_int;
 }
 
 TYPE *type_check_call(const POS *pos, const TYPE *fn, const TYPE *arg)
 {
     /*TODO impl */
+    /* check fn is func type */
+    /* check arg is arg?? */
     return &g_type_int;
 }
 
@@ -93,18 +293,23 @@ TYPE *type_check_idnode(const POS *pos, NODE_KIND kind,
                         const TYPE *e, const char *id)
 {
     /*TODO impl */
+    /* NK_DOT check e is struct , check id is member */
+    /* NK_PTR check e is pointer to struct , check id is member */
     return &g_type_int;
 }
 
 TYPE *type_check_postfix(const POS *pos, NODE_KIND kind, TYPE *e)
 {
     /*TODO impl */
+    /* NK_POSTINC/POSTDEC, check e is number variable */
     return e;
 }
 
 TYPE *type_check_unary(const POS *pos, NODE_KIND kind, TYPE *e)
 {
     /*TODO impl */
+    /* NK_PREINC NK_PREDEC  check e is number variable */
+    /* unaryop , check e is number */
     return e;
 }
 
@@ -124,35 +329,72 @@ TYPE *type_check_bin(const POS *pos, NODE_KIND kind,
     case NK_AS_AND:
     case NK_AS_XOR:
     case NK_AS_OR:
-        /*TODO impl */
+        /*TODO check left value, check number */
         return lhs;
     case NK_EQ:
     case NK_NEQ:
-        /*TODO impl */
+        /*TODO check number/number or same type */
+        if (is_number_type(lhs) && is_number_type(rhs))
+            return &g_type_int;
+        if (equal_type(lhs, rhs))
+            return &g_type_int;
+        if (is_pointer_type(lhs)) {
+            if (is_null_type(rhs))
+                return &g_type_int;
+            if (is_integer_type(rhs)) {
+                warning(pos, "comparison between pointer and integer");
+                return &g_type_int;
+            }
+        }
+        if (is_pointer_type(rhs)) {
+            if (is_null_type(lhs))
+                return &g_type_int;
+            if (is_integer_type(lhs)) {
+                warning(pos, "comparison between pointer and integer");
+                return &g_type_int;
+            }
+        }
         return &g_type_int;
     case NK_LT:
     case NK_GT:
     case NK_LE:
     case NK_GE:
-        /*TODO impl */
+        /*TODO check number or pointer */
         return &g_type_int;
     case NK_SHL:
     case NK_SHR:
+        /*TODO check integer */
+        return lhs;
     case NK_ADD:
+        if (is_number_type(lhs) && is_number_type(rhs))
+            return implicit_conv(lhs, rhs);
+        if (is_pointer_type(lhs) && is_integer_type(rhs))
+            return lhs;
+        if (is_integer_type(lhs) && is_pointer_type(rhs))
+            return rhs;
+        break;
     case NK_SUB:
+        if (is_number_type(lhs) && is_number_type(rhs))
+            return implicit_conv(lhs, rhs);
+        if (is_pointer_type(lhs) && is_integer_type(rhs))
+            return lhs;
+        break;
     case NK_MUL:
     case NK_DIV:
     case NK_MOD:
+        if (is_number_type(lhs) && is_number_type(rhs))
+            return implicit_conv(lhs, rhs);
+        break;
     case NK_AND:
     case NK_XOR:
     case NK_OR:
-        /*TODO impl */
+        /*TODO check number */
         return &g_type_int;
     case NK_LAND:
-        /*TODO impl */
+        /*TODO check number */
         return &g_type_int;
     case NK_LOR:
-        /*TODO impl */
+        /*TODO check number */
         return &g_type_int;
     case NK_COND2:
         /*TODO impl */
@@ -171,6 +413,7 @@ TYPE *type_check_bin(const POS *pos, NODE_KIND kind,
 void type_check_value(const POS *pos, const TYPE *t)
 {
     /*TODO impl */
+    /* check not void */
 }
 
 const char *get_type_string(const TYPE *typ)

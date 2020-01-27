@@ -1,9 +1,13 @@
+#include <stdio.h>
 
-int baz;
-int bar();
-int foo()
+int foo(char *p, int n)
 {
-    int bar;
-    int baz;
-    return bar;
+    if (p == 1)
+        return 1;
+    return 0;
+}
+
+int main()
+{
+    return 0;
 }
