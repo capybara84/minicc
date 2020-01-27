@@ -1390,22 +1390,25 @@ static bool parse_declarator(PARSER *pars, TYPE **typ, char **id);
 init_declarator
 	= declarator ['=' initializer]
 */
-static bool parse_init_declarator(PARSER *pars)
+static bool parse_init_declarator(PARSER *pars, TYPE **pptyp)
 {
     /*TODO Impl. init */
-    TYPE *typ;
     char *id = NULL;
 
     ENTER("parse_init_declarator");
 
     assert(pars);
+    assert(pptyp);
+    assert(*pptyp);
 
-    typ = new_type(T_UNKNOWN, NULL);
-    if (!parse_declarator(pars, &typ, &id))
+    if (!parse_declarator(pars, pptyp, &id))
         return false;
+    /*TODO
+    new_symbol();
+    */
     if (is_token(pars, TK_ASSIGN)) {
         next(pars);
-        /*TODO*/
+        /*TODO impl. initial value */
         if (!parse_initializer(pars))
             return false;
     }
@@ -1418,7 +1421,7 @@ static bool parse_init_declarator(PARSER *pars)
 init_declarator_list
     = init_declarator {',' init_declarator}
 */
-static bool parse_init_declarator_list(PARSER *pars)
+static bool parse_init_declarator_list(PARSER *pars, TYPE *typ)
 {
     /*TODO impl init*/
     ENTER("parse_init_declarator_list");
@@ -1426,7 +1429,10 @@ static bool parse_init_declarator_list(PARSER *pars)
     assert(pars);
 
     for (;;) {
-        if (!parse_init_declarator(pars))
+        TYPE *ntyp;
+
+        ntyp = dup_type(typ);
+        if (!parse_init_declarator(pars, &ntyp))
             return false;
         if (!is_token(pars, TK_COMMA))
             break;
@@ -1465,7 +1471,7 @@ static bool parse_declaration(PARSER *pars, bool is_parameter)
 
     if (is_init_declarator_list(pars)) {
         /*TODO impl init */
-        if (!parse_init_declarator_list(pars))
+        if (!parse_init_declarator_list(pars, typ))
             return false;
     }
     if (!expect(pars, TK_SEMI))
