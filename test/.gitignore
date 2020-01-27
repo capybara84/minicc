@@ -1,4 +1,5 @@
 *.o
 *.output
+*.diff
 test_scanner
 test_parser
