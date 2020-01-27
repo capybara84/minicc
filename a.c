@@ -1,5 +1,6 @@
 int add(int a, int b)
 {
+    int *p;
     int x, y;
 
     a = !a;
@@ -12,5 +13,5 @@ int add(int a, int b)
         return a - b;
     (a == b) ? 1 : 0;
     a[10];
-    foo(1,2,3);
+    add(1,2,3);
 }

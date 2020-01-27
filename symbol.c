@@ -9,6 +9,7 @@ SYMTAB *new_symtab(SYMTAB *up)
     SYMTAB *tab = (SYMTAB*) alloc(sizeof (SYMTAB));
     tab->head = tab->tail = NULL;
     tab->up = up;
+    tab->scope = up ? up->scope+1 : 0;
     return tab;
 }
 
@@ -25,7 +26,7 @@ void term_symtab(void)
 }
 
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type)
+SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type, int scope)
 {
     SYMBOL *p;
 
@@ -42,6 +43,7 @@ SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type)
     p->kind = kind;
     p->id = id;
     p->type = type;
+    p->scope = scope;
     p->tab = NULL;
     p->body = NULL;
     return p;
@@ -116,6 +118,7 @@ void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab)
     const SYMBOL *sym;
     if (tab == NULL)
         return;
+    fprintf(fp, "scope:%d\n", tab->scope);
     for (sym = tab->head; sym != NULL; sym = sym->next) {
         fprint_symbol(fp, indent, sym);
     }

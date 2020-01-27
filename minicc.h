@@ -154,6 +154,7 @@ struct symbol {
     SYMBOL_KIND kind;
     const char *id;
     TYPE *type;
+    int scope;
     SYMTAB *tab;
     NODE *body;
 };
@@ -162,9 +163,10 @@ struct symtab {
     SYMBOL *head;
     SYMBOL *tail;
     struct symtab *up;
+    int scope;
 };
 
-SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type);
+SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type, int scope);
 SYMBOL *lookup_symbol(const char *id);
 
 bool init_symtab(void);

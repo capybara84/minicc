@@ -991,7 +991,7 @@ static bool parse_constant_expression(PARSER *pars, NODE **exp)
     return true;
 }
 
-static bool parse_compound_statement(PARSER *pars, NODE **node);
+static bool parse_compound_statement(PARSER *pars, NODE **node, int scope);
 
 /*
 statement
@@ -1031,7 +1031,7 @@ jump_statement
 	| RETURN [expression] ';'
 
 */
-static bool parse_statement(PARSER *pars, NODE **node)
+static bool parse_statement(PARSER *pars, NODE **node, int scope)
 {
     ENTER("parse_statement");
     assert(pars);
@@ -1049,7 +1049,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
                 goto fail;
             if (!expect(pars, TK_COLON))
                 goto fail;
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             *node = new_node2(NK_CASE, &pos, NULL, e, b);
         }
@@ -1063,7 +1063,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             next(pars);
             if (!expect(pars, TK_COLON))
                 goto fail;
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             *node = new_node1(NK_DEFAULT, &pos, NULL, b);
         }
@@ -1072,7 +1072,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
         TRACE("parse_statement", "compound");
         {
             SYMTAB *tab = enter_scope();
-            if (!parse_compound_statement(pars, node)) {
+            if (!parse_compound_statement(pars, node, scope+1)) {
                 static TOKEN tokens[] = { TK_SEMI, TK_END, TK_EOF };
                 skip_error_to(pars, tokens, COUNT_OF(tokens));
                 leave_scope();
@@ -1096,11 +1096,11 @@ static bool parse_statement(PARSER *pars, NODE **node)
             type_check_value(&pos, c->type);
             if (!expect(pars, TK_RPAR))
                 goto fail;
-            if (!parse_statement(pars, &t))
+            if (!parse_statement(pars, &t, scope))
                 goto fail;
             if (is_token(pars, TK_ELSE)) {
                 next(pars);
-                if (!parse_statement(pars, &e))
+                if (!parse_statement(pars, &e, scope))
                     goto fail;
             } else
                 e = NULL;
@@ -1121,7 +1121,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             type_check_value(&pos, e->type);
             if (!expect(pars, TK_RPAR))
                 goto fail;
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             /*TODO check case value (unique and exclusive */
             *node = new_node2(NK_SWITCH, &pos, NULL, e, b);
@@ -1140,7 +1140,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             type_check_value(&pos, c->type);
             if (!expect(pars, TK_RPAR))
                 goto fail;
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             *node = new_node2(NK_WHILE, &pos, NULL, c, b);
         }
@@ -1151,7 +1151,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             NODE *b = NULL, *c = NULL;
             POS pos = *get_pos(pars);
             next(pars);
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             if (!expect(pars, TK_WHILE))
                 goto fail;
@@ -1195,7 +1195,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             }
             if (!expect(pars, TK_RPAR))
                 goto fail;
-            if (!parse_statement(pars, &b))
+            if (!parse_statement(pars, &b, scope))
                 goto fail;
             *node = new_node2(NK_FOR, &pos, NULL, e1,
                         new_node2(NK_FOR2, &pos, NULL, e2,
@@ -1266,7 +1266,7 @@ static bool parse_statement(PARSER *pars, NODE **node)
             {
                 NODE *np = NULL;
                 POS pos = *get_pos(pars);
-                if (!parse_statement(pars, &np))
+                if (!parse_statement(pars, &np, scope))
                     goto fail;
                 *node = new_node_idnode(NK_LABEL, &pos, NULL, np, id);
             }
@@ -1296,13 +1296,13 @@ fail:
     return false;
 }
 
-static bool parse_declaration(PARSER *pars, bool is_parameter);
+static bool parse_declaration(PARSER *pars, bool is_parameter, int scope);
 
 /*
 compound_statement
 	= '{' {declaration} {statement} '}'
 */
-static bool parse_compound_statement(PARSER *pars, NODE **node)
+static bool parse_compound_statement(PARSER *pars, NODE **node, int scope)
 {
     ENTER("parse_compound_statement");
 
@@ -1314,14 +1314,13 @@ static bool parse_compound_statement(PARSER *pars, NODE **node)
     if (!expect(pars, TK_BEGIN))
         return false;
     while (is_declaration(pars)) {
-        /* TODO impl local decl */
-        if (!parse_declaration(pars, false))
+        if (!parse_declaration(pars, false, scope))
             return false;
     }
     while (is_statement(pars)) {
         NODE *np = NULL;
         POS pos = *get_pos(pars);
-        if (!parse_statement(pars, &np))
+        if (!parse_statement(pars, &np, scope))
             return false;
         (*node)->u.comp.node = node_link(NK_LINK, &pos, np,
                 (*node)->u.comp.node);
@@ -1390,9 +1389,9 @@ static bool parse_declarator(PARSER *pars, TYPE **typ, char **id);
 init_declarator
 	= declarator ['=' initializer]
 */
-static bool parse_init_declarator(PARSER *pars, TYPE **pptyp)
+static bool parse_init_declarator(PARSER *pars, TYPE **pptyp, int scope)
 {
-    /*TODO Impl. init */
+    SYMBOL *sym = NULL;
     char *id = NULL;
 
     ENTER("parse_init_declarator");
@@ -1403,9 +1402,24 @@ static bool parse_init_declarator(PARSER *pars, TYPE **pptyp)
 
     if (!parse_declarator(pars, pptyp, &id))
         return false;
-    /*TODO
-    new_symbol();
-    */
+    sym = lookup_symbol(id);
+    if (sym) {
+        if (sym->kind == SK_FUNC && (*pptyp)->kind == T_FUNC) {
+            if (!equal_type(sym->type, (*pptyp)))
+                parser_error(pars, "conflicting types for '%s'", id);
+        } else if (sym->kind != SK_FUNC && (*pptyp)->kind == T_FUNC) {
+            parser_error(pars, "'%s' different kind of symbol", id);
+        } else if (sym->scope == scope) {
+            parser_error(pars, "'%s' duplicated", id);
+        } else {
+            sym = NULL;
+        }
+    }
+    if (sym == NULL) {
+        new_symbol(((*pptyp)->kind == T_FUNC) ? SK_FUNC : SK_LOCAL,
+                id, *pptyp, scope);
+    }
+
     if (is_token(pars, TK_ASSIGN)) {
         next(pars);
         /*TODO impl. initial value */
@@ -1421,7 +1435,7 @@ static bool parse_init_declarator(PARSER *pars, TYPE **pptyp)
 init_declarator_list
     = init_declarator {',' init_declarator}
 */
-static bool parse_init_declarator_list(PARSER *pars, TYPE *typ)
+static bool parse_init_declarator_list(PARSER *pars, TYPE *typ, int scope)
 {
     /*TODO impl init*/
     ENTER("parse_init_declarator_list");
@@ -1432,7 +1446,7 @@ static bool parse_init_declarator_list(PARSER *pars, TYPE *typ)
         TYPE *ntyp;
 
         ntyp = dup_type(typ);
-        if (!parse_init_declarator(pars, &ntyp))
+        if (!parse_init_declarator(pars, &ntyp, scope))
             return false;
         if (!is_token(pars, TK_COMMA))
             break;
@@ -1449,7 +1463,7 @@ static bool parse_declaration_specifiers(PARSER *pars,
 declaration
 	= declaration_specifiers [init_declarator_list] ';'
 */
-static bool parse_declaration(PARSER *pars, bool is_parameter)
+static bool parse_declaration(PARSER *pars, bool is_parameter, int scope)
 {
     TYPE *typ = new_type(T_UNKNOWN, NULL);
 
@@ -1471,7 +1485,7 @@ static bool parse_declaration(PARSER *pars, bool is_parameter)
 
     if (is_init_declarator_list(pars)) {
         /*TODO impl init */
-        if (!parse_init_declarator_list(pars, typ))
+        if (!parse_init_declarator_list(pars, typ, scope))
             return false;
     }
     if (!expect(pars, TK_SEMI))
@@ -2446,7 +2460,7 @@ static bool parse_external_declaration(PARSER *pars)
                 }
             } else {
                 sym = new_symbol((ntyp->kind == T_FUNC) ? SK_FUNC : SK_GLOBAL,
-                                    id, ntyp);
+                                    id, ntyp, 0);
             }
 
             if (is_token(pars, TK_ASSIGN)) {
@@ -2477,7 +2491,7 @@ static bool parse_external_declaration(PARSER *pars)
         for (;;) {
             /*TODO Handle old style parameter decl syntax */
             if (is_declaration(pars)) {
-                if (!parse_declaration(pars, true))
+                if (!parse_declaration(pars, true, 1))
                     return false;
             } else
                 break;
@@ -2487,10 +2501,10 @@ static bool parse_external_declaration(PARSER *pars)
         }
         enter_function(sym);
         for (p = sym->type->param; p != NULL; p = p->next) {
-            new_symbol(SK_PARAM, p->id, p->type);
+            new_symbol(SK_PARAM, p->id, p->type, 1);
             /*TODO calc offset of parameter */
         }
-        if (!parse_compound_statement(pars, &np))
+        if (!parse_compound_statement(pars, &np, 1))
             return false;
         sym->body = np;
         leave_function();
