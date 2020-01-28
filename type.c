@@ -31,6 +31,7 @@ TYPE *new_type(TYPE_KIND kind, TYPE *typ)
     tp->type = typ;
     tp->param = NULL;
     tp->tag = NULL;
+    tp->size = 0;
     return tp;
 }
 
@@ -43,6 +44,7 @@ TYPE *dup_type(TYPE *typ)
     tp->type = typ->type;
     tp->param = typ->param;
     tp->tag = typ->tag;
+    tp->size = typ->size;
     return tp;
 }
 
@@ -62,6 +64,8 @@ bool equal_type(const TYPE *tl, const TYPE *tr)
     if (tl->tqual != tr->tqual)
         return false;
     if (tl->tag != tr->tag)
+        return false;
+    if (tl->size != tr->size)
         return false;
     if (!equal_type(tl->type, tr->type))
         return false;
@@ -555,7 +559,10 @@ void fprint_type(FILE *fp, const TYPE *typ)
             fprint_type(fp, typ->type);
             break;
         case T_ARRAY:
-            fprintf(fp, "ARRAY [] of ");
+            if (typ->size >= 0)
+                fprintf(fp, "ARRAY [%d] of ", typ->size);
+            else
+                fprintf(fp, "ARRAY [] of ");
             fprint_type(fp, typ->type);
             break;
         case T_FUNC:

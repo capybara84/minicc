@@ -985,7 +985,7 @@ static bool parse_expression(PARSER *pars, NODE **exp)
 constant_expression
     = conditional_expression
 */
-static bool parse_constant_expression(PARSER *pars, NODE **exp)
+static bool parse_constant_expression(PARSER *pars, NODE **exp, int *result)
 {
     ENTER("parse_constant_expression");
 
@@ -994,6 +994,8 @@ static bool parse_constant_expression(PARSER *pars, NODE **exp)
     if (!parse_conditional_expression(pars, exp))
         return false;
 
+    if (!calc_constant_expr(*exp, result))
+        return false;
     LEAVE("parse_constant_expression");
     return true;
 }
@@ -1050,15 +1052,16 @@ static bool parse_statement(PARSER *pars, NODE **node, int scope)
         {
             NODE *e = NULL, *b = NULL;
             POS pos = *get_pos(pars);
+            int v = 0; 
             next(pars);
-            /*TODO get constant value */
-            if (!parse_constant_expression(pars, &e))
+            if (!parse_constant_expression(pars, &e, &v))
                 goto fail;
             if (!expect(pars, TK_COLON))
                 goto fail;
             if (!parse_statement(pars, &b, scope))
                 goto fail;
-            *node = new_node2(NK_CASE, &pos, NULL, e, b);
+            /*TODO check e exclusive */
+            *node = new_node_num_node(NK_CASE, &pos, NULL, b, v);
         }
         break;
     case TK_DEFAULT:
@@ -1680,15 +1683,18 @@ static bool parse_abstract_declarator(PARSER *pars, TYPE **pptyp, char **id)
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
             NODE *e = NULL;
+            int v = -1;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars, &e))
+                if (!parse_constant_expression(pars, &e, &v))
                     return false;
+                if (v < 0)
+                    parser_error(pars, "negative constant");
             }
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO calc array size (eval const node 'e') */
+            (*pptyp)->size = v;
         } else if (is_token(pars, TK_LPAR)) {
             PARAM *param_list = NULL;
             next(pars);
@@ -1778,15 +1784,18 @@ static bool parse_parameter_abstract_declarator(PARSER *pars,
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
             NODE *e = NULL;
+            int v = -1;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars, &e))
+                if (!parse_constant_expression(pars, &e, &v))
                     return false;
+                if (v < 0)
+                    parser_error(pars, "negative constant");
             }
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO calc array size (eval const node 'e') */
+            (*pptyp)->size = v;
         } else if (is_token(pars, TK_LPAR)) {
             PARAM *param = NULL;
             next(pars);
@@ -1917,15 +1926,18 @@ static bool parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
     for (;;) {
         if (is_token(pars, TK_LBRA)) {
             NODE *e = NULL;
+            int v = -1;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars, &e))
+                if (!parse_constant_expression(pars, &e, &v))
                     return false;
+                if (v < 0)
+                    parser_error(pars, "negative constant");
             }
             if (!expect(pars,TK_RBRA))
                 return false;
             *pptyp = new_type(T_ARRAY, *pptyp);
-            /*TODO calc array size (eval const node 'e') */
+            (*pptyp)->size = v;
         } else if (is_token(pars, TK_LPAR)) {
             PARAM *param = NULL;
             next(pars);
@@ -1975,9 +1987,11 @@ static bool parse_struct_declarator(PARSER *pars)
 
     if (is_token(pars, TK_COLON)) {
         NODE *e = NULL;
+        int v = 0;
         next(pars);
-        if (!parse_constant_expression(pars, &e))
+        if (!parse_constant_expression(pars, &e, &v))
             return false;
+        /*TODO impl. bit */
     } else {
         typ = new_type(T_UNKNOWN, NULL);
         id = NULL;
@@ -1985,9 +1999,11 @@ static bool parse_struct_declarator(PARSER *pars)
             return false;
         if (is_token(pars, TK_COLON)) {
             NODE *e = NULL;
+            int v = 0;
             next(pars);
-            if (!parse_constant_expression(pars, &e))
+            if (!parse_constant_expression(pars, &e, &v))
                 return false;
+            /*TODO impl. bit */
         }
     }
     LEAVE("parse_struct_declarator");
@@ -2100,8 +2116,9 @@ static bool parse_enumerator(PARSER *pars)
     next(pars);
     if (is_token(pars, TK_ASSIGN)) {
         NODE *e = NULL;
+        int v = 0;
         next(pars);
-        if (!parse_constant_expression(pars, &e))
+        if (!parse_constant_expression(pars, &e, &v))
             return false;
     }
     LEAVE("parse_enumerator");

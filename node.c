@@ -56,6 +56,15 @@ NODE *new_node_idnode(NODE_KIND kind, const POS *pos, TYPE *typ,
     return np;
 }
 
+NODE *new_node_num_node(NODE_KIND kind, const POS *pos, TYPE *typ,
+                    NODE *nodep, int num)
+{
+    NODE *np = new_node(kind, pos, typ);
+    np->u.num_node.node = nodep;
+    np->u.num_node.num = num;
+    return np;
+}
+
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
 {
     NODE *np = new_node2(kind, pos, NULL, n, NULL);
@@ -66,6 +75,71 @@ NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
         ;
     p->u.link.right = np;
     return top;
+}
+
+bool calc_constant_expr(const NODE *np, int *result)
+{
+    assert(np);
+    assert(result);
+
+    switch (np->kind) {
+    case NK_EQ:
+    case NK_NEQ:
+    case NK_LT:
+    case NK_GT:
+    case NK_LE:
+    case NK_GE:
+        /*TODO*/
+        return false;
+    case NK_SHL:
+    case NK_SHR:
+        /*TODO*/
+        return false;
+    case NK_ADD:
+    case NK_SUB:
+    case NK_MUL:
+    case NK_DIV:
+    case NK_MOD:
+        /*TODO*/
+        return true;
+    case NK_LOR:
+    case NK_LAND:
+        /*TODO*/
+        return false;
+    case NK_OR:
+    case NK_XOR:
+    case NK_AND:
+        /*TODO*/
+        return false;
+    case NK_UPLUS:
+    case NK_UMINUS:
+    case NK_COMPLEMENT:
+    case NK_NOT:
+        /*TODO*/
+        return false;
+    case NK_CAST:
+        /*TODO*/
+        return false;
+    case NK_COND:
+        /*TODO*/
+        return false;
+    case NK_ID:
+        /*TODO*/
+        return false;
+    case NK_CHAR_LIT:
+    case NK_INT_LIT:
+        *result = np->u.num;
+        return true;
+    case NK_UINT_LIT:
+    case NK_LONG_LIT:
+    case NK_ULONG_LIT:
+        /*TODO*/
+        return false;
+    default:
+        error(&np->pos, "expect integer constant expression");
+        break;
+    }
+    return false;
 }
 
 const char *get_node_op_string(NODE_KIND kind)
@@ -159,10 +233,9 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprint_node(fp, indent, np->u.link.right);
         break;
     case NK_CASE:
-        fprintf(fp, "%*scase ", indent, "");
-        fprint_node(fp, indent, np->u.link.left);
+        fprintf(fp, "%*scase %d:", indent, "", np->u.num_node.num);
         fprintf(fp, ":\n");
-        fprint_node(fp, indent+2, np->u.link.right);
+        fprint_node(fp, indent+2, np->u.num_node.node);
         break;
     case NK_DEFAULT:
         fprintf(fp, "%*sdefault:\n", indent, "");

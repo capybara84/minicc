@@ -1,7 +1,2 @@
-void foo()
-{
-    switch ("abc") {
-        break;
-    }
-    return 0;
-}
+int b[] = [1,2,3];
+int a[ b[1] ];

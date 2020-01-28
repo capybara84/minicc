@@ -88,6 +88,7 @@ typedef enum {
     NK_ADDR, NK_DEREF, NK_UPLUS, NK_UMINUS, NK_COMPLEMENT, NK_NOT,
 } NODE_KIND;
 
+
 typedef enum {
     T_UNKNOWN, T_VOID, T_NULL, T_CHAR, T_UCHAR, T_SHORT, T_USHORT,
     T_INT, T_UINT, T_LONG, T_ULONG, T_FLOAT, T_DOUBLE,
@@ -113,6 +114,7 @@ typedef struct type {
     struct type *type;
     struct param *param;
     char *tag;
+    int size;
 } TYPE;
 
 extern TYPE g_type_null, g_type_uchar, g_type_int;
@@ -200,6 +202,10 @@ struct node {
             NODE *node;
             const char *id;
         } idnode;
+        struct {
+            NODE *node;
+            int num;
+        } num_node;
         int num;
         const char *id;
         SYMBOL *sym;
@@ -214,7 +220,10 @@ NODE *new_node_id(NODE_KIND kind, const POS *pos, TYPE *typ, const char *id);
 NODE *new_node_sym(NODE_KIND kind, const POS *pos, TYPE *typ, SYMBOL *sym);
 NODE *new_node_idnode(NODE_KIND kind, const POS *pos, TYPE *typ,
         NODE *ep, const char *id);
+NODE *new_node_num_node(NODE_KIND kind, const POS *pos, TYPE *typ,
+        NODE *np, int num);
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
+bool calc_constant_expr(const NODE *np, int *result);
 const char *get_node_op_string(NODE_KIND kind);
 void fprint_node(FILE *fp, int indent, const NODE *np);
 void print_node(const NODE *np);
