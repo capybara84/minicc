@@ -88,6 +88,16 @@ void leave_function(void)
     current_function = NULL;
 }
 
+bool sym_is_left_value(const SYMBOL *sym)
+{
+    if (sym->kind == SK_FUNC)
+        return false;
+    if (is_const_type(sym->type))
+        return false;
+    return true;
+}
+
+
 const char *get_sym_kind_string(SYMBOL_KIND kind)
 {
     switch (kind) {

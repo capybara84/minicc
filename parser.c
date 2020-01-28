@@ -35,7 +35,7 @@ int get_int_lit(PARSER *pars)
 {
     assert(pars);
     assert(pars->scan);
-    assert(pars->token == TK_INT_LIT);
+    assert(pars->token == TK_INT_LIT || pars->token == TK_CHAR_LIT);
     return pars->scan->num;
 }
 
@@ -932,6 +932,52 @@ static bool parse_conditional_expression(PARSER *pars, NODE **exp)
     return true;
 }
 
+
+static bool is_left_value(const NODE *np)
+{
+    switch (np->kind) {
+    case NK_ID:
+        return sym_is_left_value(np->u.sym);
+    case NK_DEREF:
+    case NK_ARRAY:
+        return  !is_const_type(np->type);
+    case NK_DOT:
+    case NK_PTR:
+        /*TODO impl struct/union */
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+static TYPE *check_assign(const POS *pos, NODE_KIND kind, NODE *lhs, TYPE *rt)
+{
+    if (!is_left_value(lhs)) {
+        error(pos, "left value required");
+        return &g_type_int;
+    }
+    switch (kind) {
+    case NK_ASSIGN:
+        type_check_assign(pos, lhs->type, rt);
+        break;
+    case NK_AS_MUL: case NK_AS_DIV: case NK_AS_MOD:
+        type_check_assign_number(pos, lhs->type, rt);
+        break;
+    case NK_AS_ADD: case NK_AS_SUB:
+        type_check_assign_number_or_pointer(pos, lhs->type, rt);
+        break;
+    case NK_AS_SHL: case NK_AS_SHR:
+    case NK_AS_AND: case NK_AS_XOR: case NK_AS_OR: case NK_EQ:
+        type_check_assign_integer(pos, lhs->type, rt);
+        break;
+    default:
+        assert(0);
+        break;
+    }
+    return lhs->type;
+}
+
 /*
 assignment_expression
 	= conditional_expression
@@ -953,7 +999,7 @@ static bool parse_assignment_expression(PARSER *pars, NODE **exp)
         next(pars);
         if (!parse_assignment_expression(pars, &rhs))
             return false;
-        typ = type_check_bin(&pos, kind, (*exp)->type, rhs->type);
+        typ = check_assign(&pos, kind, *exp, rhs->type);
         *exp = new_node2(kind, &pos, typ, *exp, rhs);
     }
     LEAVE("parse_assignment_expression");

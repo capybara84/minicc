@@ -421,9 +421,42 @@ void type_check_value(const POS *pos, const TYPE *t)
 
 void type_check_integer(const POS *pos, const TYPE *t)
 {
-    /*TODO check integer */
+    if (!is_integer_type(t))
+        error(pos, "not an integer");
 }
 
+void type_check_assign(const POS *pos, const TYPE *lhs, const TYPE *rhs)
+{
+    /*TODO check whether assignment is possible*/
+}
+
+void type_check_assign_number(const POS *pos, const TYPE *lhs, const TYPE *rhs)
+{
+    if (!is_number_type(lhs) || !is_number_type(rhs))
+        error(pos, "number type required");
+}
+
+void type_check_assign_number_or_pointer(const POS *pos,
+        const TYPE *lhs, const TYPE *rhs)
+{
+    if (!(is_number_type(lhs) || is_pointer_type(lhs)) ||
+            !(is_number_type(rhs) || is_pointer_type(rhs)))
+        error(pos, "number or pointer type required");
+}
+
+void type_check_assign_integer(const POS *pos, const TYPE *lhs, const TYPE *rhs)
+{
+    if (!is_integer_type(lhs) || is_integer_type(rhs))
+        error(pos, "integer type required");
+}
+
+bool is_const_type(const TYPE *t)
+{
+    assert(t);
+    return (t->tqual & TQ_CONST) != 0;
+}
+
+/*
 const char *get_type_string(const TYPE *typ)
 {
     if (typ == NULL)
@@ -442,18 +475,19 @@ const char *get_type_string(const TYPE *typ)
     case T_ULONG:       return "ulong";
     case T_FLOAT:       return "float";
     case T_DOUBLE:      return "double";
-    case T_STRUCT:      return "struct"; /*TODO*/
-    case T_UNION:       return "union"; /*TODO*/
-    case T_ENUM:        return "enum";  /*TODO*/
-    case T_TYPEDEF_NAME:return "typedef_name";  /*TODO*/
-    case T_POINTER:     return "pointer";   /*TODO*/
-    case T_ARRAY:       return "array";   /*TODO*/
-    case T_FUNC:        return "func";  /*TODO*/
+    case T_STRUCT:      return "struct";
+    case T_UNION:       return "union";
+    case T_ENUM:        return "enum";
+    case T_TYPEDEF_NAME:return "typedef_name";
+    case T_POINTER:     return "pointer";
+    case T_ARRAY:       return "array";
+    case T_FUNC:        return "func";
     case T_SIGNED:      return "SIGNED";
     case T_UNSIGNED:    return "UNSIGNED";
     }
     return "?";
 }
+*/
 
 const char *get_sclass_string(STORAGE_CLASS sc)
 {

@@ -10,11 +10,15 @@
 #define BYTE_LONG   8
 #define BYTE_PTR    8
 
-#define MAX_UCHAR   255
 #define MAX_CHAR    127
-#define MAX_USHORT  32767
-#define MAX_SHORT   65535
-
+#define MIN_CHAR    -128
+#define MAX_UCHAR   255
+#define MAX_SHORT   32767
+#define MIN_SHORT   -32768
+#define MAX_USHORT  65535
+#define MAX_INT     2147483647
+#define MIN_INT     -2147483648
+#define MAX_UINT    4294967295
 
 #include <assert.h>
 #include <stdio.h>
@@ -152,6 +156,12 @@ TYPE *type_check_unary(const POS *pos, NODE_KIND kind, TYPE *e);
 TYPE *type_check_bin(const POS *pos, NODE_KIND kind, TYPE *lhs, TYPE *rhs);
 void type_check_value(const POS *pos, const TYPE *t);
 void type_check_integer(const POS *pos, const TYPE *t);
+void type_check_assign(const POS *pos, const TYPE *lhs, const TYPE *rhs);
+void type_check_assign_number(const POS *pos, const TYPE *lhs, const TYPE *rhs);
+void type_check_assign_number_or_pointer(const POS *pos,
+        const TYPE *lhs, const TYPE *rhs);
+void type_check_assign_integer(const POS *pos, const TYPE *lhs, const TYPE *rhs);
+bool is_const_type(const TYPE *t);
 
 const char *get_type_string(const TYPE *typ);
 void fprint_type(FILE *fp, const TYPE *typ);
@@ -191,6 +201,8 @@ SYMTAB *enter_scope(void);
 void leave_scope(void);
 void enter_function(SYMBOL *sym);
 void leave_function(void);
+bool sym_is_left_value(const SYMBOL *sym);
+
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym);
 void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab);
 void print_symtab(const SYMTAB *tab);

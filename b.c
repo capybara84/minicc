@@ -1,6 +1,9 @@
-
-int foo()
+int foo(char c)
 {
-    foo();
-    bar();
+    switch (c) {
+    case "c":
+    case 'a':
+    case 1:
+        break;
+    }
 }

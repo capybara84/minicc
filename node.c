@@ -263,9 +263,11 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
         fprint_node(fp, indent, np->u.link.right);
         break;
     case NK_CASE:
-        fprintf(fp, "%*scase %d:", indent, "", np->u.num_node.num);
-        fprintf(fp, ":\n");
-        fprint_node(fp, indent+2, np->u.num_node.node);
+        fprintf(fp, "%*scase %d:\n", indent, "", np->u.num_node.num);
+        if (np->u.num_node.node && np->u.num_node.node->kind == NK_CASE)
+            fprint_node(fp, indent, np->u.num_node.node);
+        else
+            fprint_node(fp, indent+2, np->u.num_node.node);
         break;
     case NK_DEFAULT:
         fprintf(fp, "%*sdefault:\n", indent, "");
