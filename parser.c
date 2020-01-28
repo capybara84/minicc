@@ -490,7 +490,10 @@ static bool parse_postfix_expression(PARSER *pars, NODE **exp)
         }
         if (!expect(pars, TK_RPAR))
             return false;
-        typ = type_check_call(&pos, (*exp)->type, ep->type);
+        if (ep)
+            typ = type_check_call(&pos, (*exp)->type, ep->type);
+        else
+            typ = type_check_call(&pos, (*exp)->type, NULL);
         *exp = new_node2(NK_CALL, &pos, typ, *exp, ep);
         break;
     case TK_DOT:
@@ -1929,10 +1932,10 @@ static bool parse_declarator(PARSER *pars, TYPE **pptyp, char **id)
             int v = -1;
             next(pars);
             if (is_constant_expression(pars)) {
-                if (!parse_constant_expression(pars, &e, &v))
-                    return false;
-                if (v < 0)
-                    parser_error(pars, "negative constant");
+                if (parse_constant_expression(pars, &e, &v)) {
+                    if (v < 0)
+                        parser_error(pars, "negative constant");
+                }
             }
             if (!expect(pars,TK_RBRA))
                 return false;

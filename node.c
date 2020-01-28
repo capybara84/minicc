@@ -79,6 +79,7 @@ NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top)
 
 bool calc_constant_expr(const NODE *np, int *result)
 {
+    int lval, rval;
     assert(np);
     assert(result);
 
@@ -100,7 +101,36 @@ bool calc_constant_expr(const NODE *np, int *result)
     case NK_MUL:
     case NK_DIV:
     case NK_MOD:
-        /*TODO*/
+        if (!calc_constant_expr(np->u.link.left, &lval))
+            return false;
+        if (!calc_constant_expr(np->u.link.right, &rval))
+            return false;
+        switch (np->kind) {
+        case NK_ADD:
+            *result = lval + rval;
+            break;
+        case NK_SUB:
+            *result = lval - rval;
+            break;
+        case NK_MUL:
+            *result = lval * rval;
+            break;
+        case NK_DIV:
+            if (rval == 0) {
+                error(&np->pos, "divide by zero");
+                return false;
+            }
+            *result = lval / rval;
+            break;
+        case NK_MOD:
+            if (rval == 0) {
+                error(&np->pos, "divide by zero");
+                return false;
+            }
+            *result = lval % rval;
+            break;
+        default: assert(0);
+        }
         return true;
     case NK_LOR:
     case NK_LAND:

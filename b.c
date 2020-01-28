@@ -1,1 +1,6 @@
-int a[ 10000ll ];
+
+int foo()
+{
+    foo();
+    bar();
+}
