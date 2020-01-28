@@ -439,9 +439,15 @@ void type_check_assign_number(const POS *pos, const TYPE *lhs, const TYPE *rhs)
 void type_check_assign_number_or_pointer(const POS *pos,
         const TYPE *lhs, const TYPE *rhs)
 {
-    if (!(is_number_type(lhs) || is_pointer_type(lhs)) ||
-            !(is_number_type(rhs) || is_pointer_type(rhs)))
-        error(pos, "number or pointer type required");
+    if (is_number_type(lhs) && is_number_type(rhs))
+        return;
+    if (is_pointer_type(lhs) && is_pointer_type(rhs)) {
+        if (!equal_type(lhs, rhs))
+            error(pos, "different pointer types");
+        return;
+    } else if (is_pointer_type(lhs) && is_integer_type(rhs))
+        return;
+    error(pos, "number or pointer type required");
 }
 
 void type_check_assign_integer(const POS *pos, const TYPE *lhs, const TYPE *rhs)
