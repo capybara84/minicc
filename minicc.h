@@ -4,6 +4,18 @@
 #define VERSION     "0.0"
 #define MAX_IDENT   256
 
+#define BYTE_CHAR   1
+#define BYTE_SHORT  2
+#define BYTE_INT    4
+#define BYTE_LONG   8
+#define BYTE_PTR    8
+
+#define MAX_UCHAR   255
+#define MAX_CHAR    127
+#define MAX_USHORT  32767
+#define MAX_SHORT   65535
+
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
