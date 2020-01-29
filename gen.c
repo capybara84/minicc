@@ -44,10 +44,16 @@ static bool gen_expr(FILE *fp, NODE *np)
             fprintf(fp, "    movzb eax, al\n");
             break;
         case NK_NEQ:
+            fprintf(fp, "    cmp eax, edi\n");
+            fprintf(fp, "    setne al\n");
+            fprintf(fp, "    movzb eax, al\n");
+            break;
         case NK_LT:
         case NK_GT:
         case NK_LE:
         case NK_GE:
+            /*TODO*/
+            break;
         case NK_SHL:
         case NK_SHR:
             /*TODO*/
