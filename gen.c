@@ -22,7 +22,7 @@ static const char *get_var_addr(const SYMBOL *sym)
         sprintf(buf, "%s", sym->id);
         break;
     case SK_LOCAL:
-        sprintf(buf, "[rbp-%d]", sym->offset + 8);
+        sprintf(buf, "[rbp-%d]", sym->offset + 8 /* + param num * 4 */);
         break;
     case SK_PARAM:
         if (sym->num < NUM_REG_PARAM)
@@ -257,14 +257,16 @@ static bool gen_stmt(FILE *fp, NODE *np)
         /*TODO*/
         break;
     case NK_RETURN:
-        fprintf(fp, "; %s(%d) RETURN\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "; %s(%d) RETURN ", np->pos.filename, np->pos.line);
         if (np->u.link.left) {
+            fprint_node(fp, 0, np->u.link.left);
+            fprintf(fp, "\n");
             if (!gen_expr(fp, np->u.link.left))
                 return false;
-            fprintf(fp, "    mov rsp, rbp\n");
-            fprintf(fp, "    pop rbp\n");
-            fprintf(fp, "    ret\n");
         }
+        fprintf(fp, "    mov rsp, rbp\n");
+        fprintf(fp, "    pop rbp\n");
+        fprintf(fp, "    ret\n");
         break;
     case NK_LABEL:
         fprintf(fp, "; %s(%d) LABEL %s\n", np->pos.filename, np->pos.line,
@@ -296,11 +298,12 @@ static bool gen_func(FILE *fp, SYMBOL *sym)
         fprintf(fp, ".global %s\n", sym->id);
     if (!sym_is_extern(sym))
         fprintf(fp, "%s:\n", sym->id);
+    fprint_func_comment(fp, sym);
     if (sym->body) {
         int i;
         fprintf(fp, "    push rbp\n");
         fprintf(fp, "    mov rbp, rsp\n");
-        fprintf(fp, "    sub rbp, %d\n", sym->offset);
+        fprintf(fp, "    sub rbp, %d\n", sym->num * BYTE_INT + sym->offset);
         for (i = 0; i < sym->num; i++) {
             fprintf(fp, "    mov [rbp-%d],%s\n",
                     s_param_offset32[i], s_param_reg32[i]);
