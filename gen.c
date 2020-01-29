@@ -1,13 +1,16 @@
 #include "minicc.h"
 
+static int s_param_start = 0;
 static int s_label_num = 0;
 #define NUM_REG_PARAM 6
 static const char *s_param_reg32[NUM_REG_PARAM] = {
     "edi", "esi", "edx", "ecx", "r8d", "r9d",
 };
-static int s_param_offset32[NUM_REG_PARAM] = {
-    4, 8, 12, 16, 20, 24
-};
+
+static int iround(int m, int n)
+{
+    return (m + n - 1) & ~(n - 1);
+}
 
 static int new_label(void)
 {
@@ -22,11 +25,11 @@ static const char *get_var_addr(const SYMBOL *sym)
         sprintf(buf, "%s", sym->id);
         break;
     case SK_LOCAL:
-        sprintf(buf, "[rbp-%d]", sym->offset + 8 /* + param num * 4 */);
+        sprintf(buf, "[rbp-%d]", sym->offset + 4);
         break;
     case SK_PARAM:
         if (sym->num < NUM_REG_PARAM)
-            sprintf(buf, "[rbp-%d]", s_param_offset32[sym->num]);
+            sprintf(buf, "[rbp-%d]", s_param_start + sym->num * BYTE_INT);
         else
             sprintf(buf, "[rbp+%d]", sym->offset + 16 - NUM_REG_PARAM * BYTE_INT);
         break;
@@ -292,21 +295,28 @@ static bool gen_stmt(FILE *fp, NODE *np)
     return true;
 }
 
+
 static bool gen_func(FILE *fp, SYMBOL *sym)
 {
-    if (!sym_is_static(sym))
-        fprintf(fp, ".global %s\n", sym->id);
-    if (!sym_is_extern(sym))
-        fprintf(fp, "%s:\n", sym->id);
+    if (sym->body) {
+        if (!sym_is_static(sym))
+            fprintf(fp, ".global %s\n", sym->id);
+        if (!sym_is_extern(sym))
+            fprintf(fp, "%s:\n", sym->id);
+    }
     fprint_func_comment(fp, sym);
     if (sym->body) {
         int i;
+        int param_size = sym->num * BYTE_INT;   /*TODO*/
+        int local_size = sym->offset;
+        int frame_size = iround(param_size, 8) + iround(local_size, 16);
+        s_param_start = frame_size - param_size;
         fprintf(fp, "    push rbp\n");
         fprintf(fp, "    mov rbp, rsp\n");
-        fprintf(fp, "    sub rbp, %d\n", sym->num * BYTE_INT + sym->offset);
+        fprintf(fp, "    sub rsp, %d\n", frame_size);
         for (i = 0; i < sym->num; i++) {
             fprintf(fp, "    mov [rbp-%d],%s\n",
-                    s_param_offset32[i], s_param_reg32[i]);
+                    s_param_start + i * BYTE_INT, s_param_reg32[i]);
             /*TODO consider type (bits) */
         }
         if (!gen_stmt(fp, sym->body))
@@ -330,10 +340,14 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     SYMBOL *sym;
     if (tab == NULL)
         return true;
+    if (is_debug("gen"))
+        printf("gen data...\n");
     for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_GLOBAL && !gen_data(fp, sym))
             return false;
     }
+    if (is_debug("gen"))
+        printf("gen function...\n");
     for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_FUNC && !gen_func(fp, sym))
             return false;

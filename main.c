@@ -52,6 +52,7 @@ void usage()
     printf(" -dt  debug parser_trace\n");
     printf(" -dp  debug parser\n");
     printf(" -dn  debug node type\n");
+    printf(" -dg  debug generate\n");
     exit(1);
 }
 
@@ -73,6 +74,7 @@ int main(int argc ,char* argv[])
                     case 't': set_debug("parser_trace"); break;
                     case 'p': set_debug("parser"); break;
                     case 'n': set_debug("node_type"); break;
+                    case 'g': set_debug("gen"); break;
                     default: usage();
                     }
                 }

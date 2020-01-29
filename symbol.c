@@ -158,8 +158,10 @@ void fprint_func_comment(FILE *fp, const SYMBOL *sym)
     fprintf(fp, "; FUNC %s (param %d, local %d): ", sym->id, sym->num, sym->offset);
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
-    for (sp = sym->tab->head; sp != NULL; sp = sp->next)
-        fprint_var_comment(fp, sp);
+    if (sym->tab) {
+        for (sp = sym->tab->head; sp != NULL; sp = sp->next)
+            fprint_var_comment(fp, sp);
+    }
 }
 
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
