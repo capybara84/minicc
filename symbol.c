@@ -4,6 +4,11 @@ static SYMTAB *global_symtab = NULL;
 static SYMTAB *current_symtab = NULL;
 static SYMBOL *current_function = NULL;
 
+SYMTAB *get_global_symtab(void)
+{
+    return global_symtab;
+}
+
 SYMTAB *new_symtab(SYMTAB *up)
 {
     SYMTAB *tab = (SYMTAB*) alloc(sizeof (SYMTAB));

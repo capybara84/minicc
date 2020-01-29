@@ -1,7 +1,21 @@
 #include "minicc.h"
 
+#define MAX_PATH    256
+
+static void change_filename_ext(char *name, const char *orig, const char *ext)
+{
+    char *p;
+    strcpy(name, orig);
+    p = strchr(name, '.');
+    if (p)
+        strcpy(p, ext);
+    else
+        strcat(p, ext);
+}
+
 static bool compile(const char *filename)
 {
+    char out_name[MAX_PATH+1];
     PARSER *pars;
     bool result;
 
@@ -11,9 +25,23 @@ static bool compile(const char *filename)
         return false;
     }
     result = parse(pars);
+    close_parser(pars);
 
     print_global_symtab();
-    close_parser(pars);
+
+    if (result) {
+        FILE *fp;
+        change_filename_ext(out_name, filename, ".s");
+        fp = fopen(out_name, "w");
+        if (fp == NULL) {
+            fprintf(stderr, "couldn't open '%s'\n", out_name);
+            return false;
+        }
+        }
+        result = generate(fp);
+        fclose(fp);
+    }
+
     return result;
 }
 

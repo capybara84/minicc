@@ -1,6 +1,6 @@
 CFLAGS=-Wall -g
 
-mcc : main.o parser.o node.o symbol.o type.o scanner.o misc.o
+mcc : main.o gen.o parser.o node.o symbol.o type.o scanner.o misc.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 test::
@@ -17,3 +17,4 @@ type.o : minicc.h
 symbol.o : minicc.h
 node.o : minicc.h
 parser.o : minicc.h
+gen.o : minicc.h

@@ -195,6 +195,7 @@ struct symtab {
 SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type, int scope);
 SYMBOL *lookup_symbol(const char *id);
 
+SYMTAB *get_global_symtab(void);
 bool init_symtab(void);
 void term_symtab(void);
 SYMTAB *enter_scope(void);
@@ -261,5 +262,7 @@ PARSER *open_parser_text(const char *filename, const char *text);
 PARSER *open_parser(const char *filename);
 bool close_parser(PARSER *pars);
 bool parse(PARSER *pars);
+
+bool generate(FILE *fp);
 
 #endif
