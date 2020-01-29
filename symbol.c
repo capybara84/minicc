@@ -102,6 +102,17 @@ bool sym_is_left_value(const SYMBOL *sym)
     return true;
 }
 
+bool sym_is_static(const SYMBOL *sym)
+{
+/*TODO*/
+    return false;
+}
+
+bool sym_is_extern(const SYMBOL *sym)
+{
+/*TODO*/
+    return false;
+}
 
 const char *get_sym_kind_string(SYMBOL_KIND kind)
 {

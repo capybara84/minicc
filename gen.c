@@ -16,6 +16,11 @@ static void gen_footer(FILE *fp)
 {
 }
 
+static bool gen_get_var(FILE *fp, SYMBOL *sym)
+{
+    return true;
+}
+
 static bool gen_expr(FILE *fp, NODE *np)
 {
     if (np == NULL)
@@ -94,7 +99,8 @@ static bool gen_expr(FILE *fp, NODE *np)
             fprintf(fp, ";FUNC %s\n", np->u.sym->id);
             /*TODO*/
         } else {
-            gen_get_var(fp, np);
+            if (!gen_get_var(fp, np->u.sym))
+                return false;
         }
         break;
     case NK_CHAR_LIT:
@@ -132,9 +138,9 @@ static bool gen_stmt(FILE *fp, NODE *np)
             return false;
         break;
     case NK_LINK:
-        if (!gen_stmt(fp, p->u.link.left))
+        if (!gen_stmt(fp, np->u.link.left))
             return false;
-        if (!gen_stmt(fp, p->u.link.right))
+        if (!gen_stmt(fp, np->u.link.right))
             return false;
         break;
     case NK_IF:
@@ -213,7 +219,9 @@ static bool gen_stmt(FILE *fp, NODE *np)
                     np->u.idnode.id);
         break;
     case NK_EXPR:
-        fprintf(fp, "; %s(%d) EXPR\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "; %s(%d) EXPR ", np->pos.filename, np->pos.line);
+        fprint_node(fp, 0, np->u.link.left);
+        fprintf(fp, "\n");
         if (!gen_expr(fp, np->u.link.left))
             return false;
         break;
@@ -232,26 +240,29 @@ static bool gen_stmt(FILE *fp, NODE *np)
 
 static bool gen_func(FILE *fp, SYMBOL *sym)
 {
-    if (!is_static_sym(sym))
+    if (!sym_is_static(sym))
         fprintf(fp, ".global %s\n", sym->id);
-    if (!is_extern_sym(sym))
+    if (!sym_is_extern(sym))
         fprintf(fp, "%s:\n", sym->id);
     if (sym->body) {
         fprintf(fp, "    push rbp\n");
         fprintf(fp, "    mov rbp, rsp\n");
         fprintf(fp, "    sub rbp, %d\n", 8);/*TODO calc local var size*/
         /*TODO store parameter register to local area */
-        if (!gen_stmt(fp, sym->body);
+        if (!gen_stmt(fp, sym->body))
+            return false;
         fprintf(fp, "    mov rsp, rbp\n");
         fprintf(fp, "    pop rbp\n");
         fprintf(fp, "    ret\n");
     }
+    return true;
 }
 
 
 static bool gen_data(FILE *fp, SYMBOL *sym)
 {
     fprintf(fp, "%s:\n    .zero 8\n", sym->id);
+    return true;
 }
 
 static bool gen_symtab(FILE *fp, SYMTAB *tab)
@@ -259,11 +270,11 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     SYMBOL *sym;
     if (tab == NULL)
         return true;
-    for (sym = tab->sym; sym != NULL; sym = sym->next) {
+    for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_GLOBAL && !gen_data(fp, sym))
             return false;
     }
-    for (sym = tab->sym; sym != NULL; sym = sym->next) {
+    for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_FUNC && !gen_func(fp, sym))
             return false;
     }

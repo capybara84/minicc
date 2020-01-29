@@ -37,7 +37,6 @@ static bool compile(const char *filename)
             fprintf(stderr, "couldn't open '%s'\n", out_name);
             return false;
         }
-        }
         result = generate(fp);
         fclose(fp);
     }

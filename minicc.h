@@ -203,6 +203,8 @@ void leave_scope(void);
 void enter_function(SYMBOL *sym);
 void leave_function(void);
 bool sym_is_left_value(const SYMBOL *sym);
+bool sym_is_static(const SYMBOL *sym);
+bool sym_is_extern(const SYMBOL *sym);
 
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym);
 void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab);
