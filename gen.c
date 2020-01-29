@@ -69,7 +69,7 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_ASSIGN:
         if (!gen_expr(fp, np->u.link.right))
             return false;
-        if (gen_assign_expr(fp, np->u.link.left))
+        if (!gen_assign_expr(fp, np->u.link.left))
             return false;
         break;
     case NK_AS_MUL: case NK_AS_DIV: case NK_AS_MOD:

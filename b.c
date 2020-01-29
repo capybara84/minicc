@@ -1,7 +1,4 @@
-int foo(char c)
+int foo(int a, int b, int c)
 {
-    char *p;
-    int *q;
-
-    p -= 1;
+    return a + b + c;
 }
