@@ -1475,8 +1475,9 @@ static bool parse_init_declarator(PARSER *pars, TYPE **pptyp, int scope)
         }
     }
     if (sym == NULL) {
-        new_symbol(((*pptyp)->kind == T_FUNC) ? SK_FUNC : SK_LOCAL,
-                id, *pptyp, scope);
+        sym = new_symbol(((*pptyp)->kind == T_FUNC) ? SK_FUNC : SK_LOCAL,
+                        id, *pptyp, scope);
+        sym->offset = get_current_func_local_offset();
     }
 
     if (is_token(pars, TK_ASSIGN)) {
@@ -2555,6 +2556,7 @@ static bool parse_external_declaration(PARSER *pars)
             parser_warning(pars, "empty declaration");
     } else {
         PARAM *p;
+        int num;
 
         if (count != 1)
             parser_error(pars, "declaration syntax error");
@@ -2573,10 +2575,13 @@ static bool parse_external_declaration(PARSER *pars)
             parser_error(pars, "redefinition of '%s'", sym->id);
         }
         enter_function(sym);
+        num = 0;
         for (p = sym->type->param; p != NULL; p = p->next) {
-            new_symbol(SK_PARAM, p->id, p->type, 1);
-            /*TODO calc offset of parameter */
+            SYMBOL *psym = new_symbol(SK_PARAM, p->id, p->type, 1);
+            psym->num = num++;
+            psym->offset = psym->num * BYTE_INT; /*TODO consider type */
         }
+        sym->num = num;
         if (!parse_compound_statement(pars, &np, 1))
             return false;
         sym->body = np;

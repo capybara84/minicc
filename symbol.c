@@ -119,6 +119,17 @@ bool sym_is_extern(const SYMBOL *sym)
     return sym->type->sclass == SC_EXTERN;
 }
 
+int get_current_func_local_offset(void)
+{
+    int offset;
+    assert(current_function);
+    offset = current_function->offset;
+    current_function += BYTE_INT;
+    return offset;
+}
+
+
+
 const char *get_sym_kind_string(SYMBOL_KIND kind)
 {
     switch (kind) {
@@ -132,8 +143,8 @@ const char *get_sym_kind_string(SYMBOL_KIND kind)
 
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
 {
-    fprintf(fp, "%*sSYM %s %s (%d):", indent, "",
-            sym->id, get_sym_kind_string(sym->kind), sym->num);
+    fprintf(fp, "%*sSYM %s %s (p%d, l%d):", indent, "",
+            sym->id, get_sym_kind_string(sym->kind), sym->num, sym->offset);
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
     if (sym->kind == SK_FUNC) {

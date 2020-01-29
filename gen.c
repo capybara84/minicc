@@ -28,7 +28,7 @@ static const char *get_var_addr(const SYMBOL *sym)
         if (sym->num < NUM_REG_PARAM)
             sprintf(buf, "[rbp-%d]", s_param_offset32[sym->num]);
         else
-            sprintf(buf, "[rbp+%d]", sym->offset + 16 - NUM_REG_PARAM *4);
+            sprintf(buf, "[rbp+%d]", sym->offset + 16 - NUM_REG_PARAM * BYTE_INT);
         break;
     default:
         assert(0);
@@ -300,7 +300,7 @@ static bool gen_func(FILE *fp, SYMBOL *sym)
         int i;
         fprintf(fp, "    push rbp\n");
         fprintf(fp, "    mov rbp, rsp\n");
-        fprintf(fp, "    sub rbp, %d\n", 8);/*TODO calc local var size*/
+        fprintf(fp, "    sub rbp, %d\n", sym->offset);
         for (i = 0; i < sym->num; i++) {
             fprintf(fp, "    mov [rbp-%d],%s\n",
                     s_param_offset32[i], s_param_reg32[i]);

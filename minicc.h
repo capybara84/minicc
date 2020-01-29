@@ -183,7 +183,7 @@ struct symbol {
     int scope;
 
     int num;    /* func: num of parameter, var: order */
-    int offset;
+    int offset; /* func: local size */
 
     SYMTAB *tab;
     NODE *body;
@@ -209,6 +209,8 @@ void leave_function(void);
 bool sym_is_left_value(const SYMBOL *sym);
 bool sym_is_static(const SYMBOL *sym);
 bool sym_is_extern(const SYMBOL *sym);
+
+int get_current_func_local_offset(void);
 
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym);
 void fprint_symtab(FILE *fp, int indent, const SYMTAB *tab);
