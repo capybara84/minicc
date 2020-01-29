@@ -49,6 +49,8 @@ SYMBOL *new_symbol(SYMBOL_KIND kind, const char *id, TYPE *type, int scope)
     p->id = id;
     p->type = type;
     p->scope = scope;
+    p->num = 0;
+    p->offset = 0;
     p->tab = NULL;
     p->body = NULL;
     return p;
@@ -95,6 +97,7 @@ void leave_function(void)
 
 bool sym_is_left_value(const SYMBOL *sym)
 {
+    assert(sym);
     if (sym->kind == SK_FUNC)
         return false;
     if (is_const_type(sym->type))
@@ -104,14 +107,16 @@ bool sym_is_left_value(const SYMBOL *sym)
 
 bool sym_is_static(const SYMBOL *sym)
 {
-/*TODO*/
-    return false;
+    assert(sym);
+    assert(sym->type);
+    return sym->type->sclass == SC_STATIC;
 }
 
 bool sym_is_extern(const SYMBOL *sym)
 {
-/*TODO*/
-    return false;
+    assert(sym);
+    assert(sym->type);
+    return sym->type->sclass == SC_EXTERN;
 }
 
 const char *get_sym_kind_string(SYMBOL_KIND kind)
@@ -127,8 +132,8 @@ const char *get_sym_kind_string(SYMBOL_KIND kind)
 
 void fprint_symbol(FILE *fp, int indent, const SYMBOL *sym)
 {
-    fprintf(fp, "%*sSYM %s %s:", indent, "",
-            sym->id, get_sym_kind_string(sym->kind));
+    fprintf(fp, "%*sSYM %s %s (%d):", indent, "",
+            sym->id, get_sym_kind_string(sym->kind), sym->num);
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
     if (sym->kind == SK_FUNC) {

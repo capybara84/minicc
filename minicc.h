@@ -181,6 +181,10 @@ struct symbol {
     const char *id;
     TYPE *type;
     int scope;
+
+    int num;    /* func: num of parameter, var: order */
+    int offset;
+
     SYMTAB *tab;
     NODE *body;
 };

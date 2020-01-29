@@ -1,24 +1,64 @@
 #include "minicc.h"
 
 static int s_label_num = 0;
+#define NUM_REG_PARAM 6
+static const char *s_param_reg32[NUM_REG_PARAM] = {
+    "edi", "esi", "edx", "ecx", "r8d", "r9d",
+};
+static int s_param_offset32[NUM_REG_PARAM] = {
+    4, 8, 12, 16, 20, 24
+};
 
 static int new_label(void)
 {
     return s_label_num++;
 }
 
-static void gen_header(FILE *fp)
+static const char *get_var_addr(const SYMBOL *sym)
 {
-    fprintf(fp, ".intel_syntax noprefix\n");
+    static char buf[64];
+    switch (sym->kind) {
+    case SK_GLOBAL:
+        sprintf(buf, "%s", sym->id);
+        break;
+    case SK_LOCAL:
+        sprintf(buf, "[rbp-%d]", sym->offset + 8);
+        break;
+    case SK_PARAM:
+        if (sym->num < NUM_REG_PARAM)
+            sprintf(buf, "[rbp-%d]", s_param_offset32[sym->num]);
+        else
+            sprintf(buf, "[rbp+%d]", sym->offset + 16 - NUM_REG_PARAM *4);
+        break;
+    default:
+        assert(0);
+        buf[0] = 0;
+        break;
+    }
+    return buf;
 }
 
-static void gen_footer(FILE *fp)
+static bool gen_assign_expr(FILE *fp, NODE *np)
 {
-}
-
-static bool gen_get_var(FILE *fp, SYMBOL *sym)
-{
-    return true;
+    SYMBOL *sym;
+    if (np == NULL)
+        return false;
+    switch (np->kind) {
+    case NK_ID:
+        assert(np->u.sym);
+        sym = np->u.sym;
+        if (sym->kind == SK_FUNC)
+            break;
+        fprintf(fp, "    mov %s,eax ; %s\n", get_var_addr(sym), sym->id);
+        return true;
+    case NK_DOT:
+    case NK_PTR:
+        /*TODO*/
+    default:
+        break;
+    }
+    error(&np->pos, "left value required");
+    return false;
 }
 
 static bool gen_expr(FILE *fp, NODE *np)
@@ -26,7 +66,13 @@ static bool gen_expr(FILE *fp, NODE *np)
     if (np == NULL)
         return true;
     switch (np->kind) {
-    case NK_ASSIGN: case NK_AS_MUL: case NK_AS_DIV: case NK_AS_MOD:
+    case NK_ASSIGN:
+        if (!gen_expr(fp, np->u.link.right))
+            return false;
+        if (gen_assign_expr(fp, np->u.link.left))
+            return false;
+        break;
+    case NK_AS_MUL: case NK_AS_DIV: case NK_AS_MOD:
     case NK_AS_ADD: case NK_AS_SUB: case NK_AS_SHL: case NK_AS_SHR:
     case NK_AS_AND: case NK_AS_XOR: case NK_AS_OR:
         break;
@@ -105,8 +151,8 @@ static bool gen_expr(FILE *fp, NODE *np)
             fprintf(fp, ";FUNC %s\n", np->u.sym->id);
             /*TODO*/
         } else {
-            if (!gen_get_var(fp, np->u.sym))
-                return false;
+            fprintf(fp, "    mov eax,%s ; %s\n",
+                        get_var_addr(np->u.sym), np->u.sym->id);
         }
         break;
     case NK_CHAR_LIT:
@@ -251,10 +297,15 @@ static bool gen_func(FILE *fp, SYMBOL *sym)
     if (!sym_is_extern(sym))
         fprintf(fp, "%s:\n", sym->id);
     if (sym->body) {
+        int i;
         fprintf(fp, "    push rbp\n");
         fprintf(fp, "    mov rbp, rsp\n");
         fprintf(fp, "    sub rbp, %d\n", 8);/*TODO calc local var size*/
-        /*TODO store parameter register to local area */
+        for (i = 0; i < sym->num; i++) {
+            fprintf(fp, "    mov [rbp-%d],%s\n",
+                    s_param_offset32[i], s_param_reg32[i]);
+            /*TODO consider type (bits) */
+        }
         if (!gen_stmt(fp, sym->body))
             return false;
         fprintf(fp, "    mov rsp, rbp\n");
@@ -287,11 +338,20 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     return true;
 }
 
+static void gen_header(FILE *fp)
+{
+    fprintf(fp, ".intel_syntax noprefix\n");
+}
+
+static void gen_footer(FILE *fp)
+{
+}
+
 bool generate(FILE *fp)
 {
     bool result;
     gen_header(fp);
-    result =gen_symtab(fp, get_global_symtab());
+    result = gen_symtab(fp, get_global_symtab());
     gen_footer(fp);
     return result;
 }
