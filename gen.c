@@ -64,6 +64,43 @@ static bool gen_assign_expr(FILE *fp, NODE *np)
     return false;
 }
 
+static bool gen_expr(FILE *fp, NODE *np);
+
+static bool gen_an_arg(FILE *fp, int n, NODE *a)
+{
+    if (a == NULL)
+        return true;
+    assert(a->kind == NK_ARG);
+    if (a->u.link.right) {
+        if (!gen_an_arg(fp, n+1, a->u.link.right))
+            return false;
+    }
+    if (!gen_expr(fp, a->u.link.left))
+        return false;
+    if (n < NUM_REG_PARAM)
+        fprintf(fp, "    mov %s,eax\n", s_param_reg32[n]);
+    else
+        fprintf(fp, "    push eax\n");
+    return true;
+}
+
+static bool gen_arg(FILE *fp, NODE *arg_list)
+{
+    if (arg_list == NULL)
+        return true;
+    assert(arg_list->kind == NK_ARG);
+    return gen_an_arg(fp, 0, arg_list);
+}
+
+static int arg_count(const NODE *args)
+{
+    int n = 0;
+    for (; args != NULL; args = args->u.link.right)
+        n++;
+    return n;
+}
+
+
 static bool gen_expr(FILE *fp, NODE *np)
 {
     if (np == NULL)
@@ -98,10 +135,24 @@ static bool gen_expr(FILE *fp, NODE *np)
             fprintf(fp, "    movzb eax, al\n");
             break;
         case NK_LT:
+            fprintf(fp, "    cmp eax, edi\n");
+            fprintf(fp, "    setl al\n");
+            fprintf(fp, "    movzb eax, al\n");
+            break;
         case NK_GT:
+            fprintf(fp, "    cmp eax, edi\n");
+            fprintf(fp, "    setg al\n");
+            fprintf(fp, "    movzb eax, al\n");
+            break;
         case NK_LE:
+            fprintf(fp, "    cmp eax, edi\n");
+            fprintf(fp, "    setle al\n");
+            fprintf(fp, "    movzb eax, al\n");
+            break;
         case NK_GE:
-            /*TODO*/
+            fprintf(fp, "    cmp eax, edi\n");
+            fprintf(fp, "    setge al\n");
+            fprintf(fp, "    movzb eax, al\n");
             break;
         case NK_SHL:
         case NK_SHR:
@@ -142,9 +193,40 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_CAST:
     case NK_COND:
     case NK_COND2:
+        break;
     case NK_ARRAY:
+        fprintf(fp, "; TODO ARRAY\n");
+        /*TODO*/
+        break;
     case NK_CALL:
+        {
+            int n = arg_count(np->u.link.right);
+            fprintf(fp, "; CALL\n");
+            if (n > NUM_REG_PARAM) {
+                int size = (n - NUM_REG_PARAM) * BYTE_INT;
+                if (iround(size, 16) - size  > 0)
+                    fprintf(fp, "    sub rsp, %d\n",
+                        iround(size, 16) - size);
+            }
+            if (!gen_arg(fp, np->u.link.right))
+                return false;
+            assert(np->u.link.left);
+            if (np->u.link.left->kind == NK_ID) {
+                fprintf(fp, "    call %s\n", np->u.link.left->u.sym->id);
+            } else {
+                if (!gen_expr(fp, np->u.link.left))
+                    return false;
+                fprintf(fp, "    call [eax]\n");
+            }
+            if (n > NUM_REG_PARAM) {
+                fprintf(fp, "    add rsp,%d\n",
+                    iround((n - NUM_REG_PARAM)*BYTE_INT, 16));
+            }
+        }
+        break;
     case NK_ARG:
+        assert(0);
+        break;
     case NK_DOT:
     case NK_PTR:
         break;
