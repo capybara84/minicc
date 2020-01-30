@@ -144,7 +144,7 @@ const char *get_sym_kind_string(SYMBOL_KIND kind)
 void fprint_var_comment(FILE *fp, const SYMBOL *sym)
 {
     assert(sym);
-    fprintf(fp, "; %s %s (num %d, offset %d): ",
+    fprintf(fp, "# %s %s (num %d, offset %d): ",
             get_sym_kind_string(sym->kind), sym->id, sym->num, sym->offset);
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
@@ -155,7 +155,7 @@ void fprint_func_comment(FILE *fp, const SYMBOL *sym)
     const SYMBOL *sp;
     assert(sym);
     assert(sym->kind == SK_FUNC);
-    fprintf(fp, "; FUNC %s (param %d, local %d): ", sym->id, sym->num, sym->offset);
+    fprintf(fp, "# FUNC %s (param %d, local %d): ", sym->id, sym->num, sym->offset);
     fprint_type(fp, sym->type);
     fprintf(fp, "\n");
     if (sym->tab) {

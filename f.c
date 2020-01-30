@@ -1,12 +1,8 @@
-/*
 #include <stdio.h>
-void print_num(int n)
-{
-    printf("%d\n", n);
-}
-*/
-void print_num(int n);
 
+int _fact(int n);
+
+/*
 int fact(int n)
 {
     int m, f;
@@ -18,13 +14,12 @@ int fact(int n)
     }
     return f;
 }
+*/
 
-/*
 int main()
 {
-    int x;
-    x = fact(6);
-    print_num(x);
+    int i;
+    for (i = 0; i < 10; i++)
+        printf("fact(%d) = %d\n", i, _fact(i));
     return 0;
 }
-*/

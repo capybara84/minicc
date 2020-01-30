@@ -52,7 +52,7 @@ static bool gen_assign_expr(FILE *fp, NODE *np)
         sym = np->u.sym;
         if (sym->kind == SK_FUNC)
             break;
-        fprintf(fp, "    mov %s,eax ; %s\n", get_var_addr(sym), sym->id);
+        fprintf(fp, "    mov %s,eax # %s\n", get_var_addr(sym), sym->id);
         return true;
     case NK_DOT:
     case NK_PTR:
@@ -80,7 +80,7 @@ static bool gen_an_arg(FILE *fp, int n, NODE *a)
     if (n < NUM_REG_PARAM)
         fprintf(fp, "    mov %s,eax\n", s_param_reg32[n]);
     else
-        fprintf(fp, "    push eax\n");
+        fprintf(fp, "    push rax\n");
     return true;
 }
 
@@ -120,9 +120,9 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_SHL: case NK_SHR: case NK_ADD: case NK_SUB: case NK_MUL:
     case NK_DIV: case NK_MOD: case NK_OR: case NK_XOR: case NK_AND:
         gen_expr(fp, np->u.link.right);
-        fprintf(fp, "    push eax\n");
+        fprintf(fp, "    push rax\n");
         gen_expr(fp, np->u.link.left);
-        fprintf(fp, "    pop edi\n");
+        fprintf(fp, "    pop rdi\n");
         switch (np->kind) {
         case NK_EQ:
             fprintf(fp, "    cmp eax, edi\n");
@@ -195,13 +195,13 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_COND2:
         break;
     case NK_ARRAY:
-        fprintf(fp, "; TODO ARRAY\n");
+        fprintf(fp, "# TODO ARRAY\n");
         /*TODO*/
         break;
     case NK_CALL:
         {
             int n = arg_count(np->u.link.right);
-            fprintf(fp, "; CALL\n");
+            fprintf(fp, "# CALL\n");
             if (n > NUM_REG_PARAM) {
                 int size = (n - NUM_REG_PARAM) * BYTE_INT;
                 if (iround(size, 16) - size  > 0)
@@ -233,10 +233,10 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_ID:
         assert(np->u.sym);
         if (np->u.sym->kind == SK_FUNC) {
-            fprintf(fp, ";FUNC %s\n", np->u.sym->id);
+            fprintf(fp, "# FUNC %s\n", np->u.sym->id);
             /*TODO*/
         } else {
-            fprintf(fp, "    mov eax,%s ; %s\n",
+            fprintf(fp, "    mov eax,%s # %s\n",
                         get_var_addr(np->u.sym), np->u.sym->id);
         }
         break;
@@ -272,7 +272,7 @@ static bool gen_stmt(FILE *fp, NODE *np)
 
     switch (np->kind) {
     case NK_COMPOUND:
-        fprintf(fp, "; %s(%d)\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d)\n", np->pos.filename, np->pos.line);
         if (!gen_stmt(fp, np->u.comp.node))
             return false;
         break;
@@ -283,7 +283,7 @@ static bool gen_stmt(FILE *fp, NODE *np)
             return false;
         break;
     case NK_IF:
-        fprintf(fp, "; %s(%d) IF\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) IF\n", np->pos.filename, np->pos.line);
         gen_expr(fp, np->u.link.left);
         fprintf(fp, "    cmp eax, 0\n");
         l1 = new_label();
@@ -300,23 +300,23 @@ static bool gen_stmt(FILE *fp, NODE *np)
         fprintf(fp, ".L%d:\n", l2);
         break;
     case NK_SWITCH:
-        fprintf(fp, "; %s(%d) SWITCH\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) SWITCH\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_CASE:
-        fprintf(fp, "; %s(%d) CASE\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) CASE\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_DEFAULT:
-        fprintf(fp, "; %s(%d) DEFAULT\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) DEFAULT\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_WHILE:
-        fprintf(fp, "; %s(%d) WHILE\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) WHILE\n", np->pos.filename, np->pos.line);
         l1 = new_label();
         fprintf(fp, ".L%d:\n", l1);
         gen_expr(fp, np->u.link.left);
-        fprintf(fp, "    cmp, eax, 0\n");
+        fprintf(fp, "    cmp eax, 0\n");
         l2 = new_label();
         fprintf(fp, "    je .L%d\n", l2);
         gen_stmt(fp, np->u.link.right);
@@ -324,27 +324,27 @@ static bool gen_stmt(FILE *fp, NODE *np)
         fprintf(fp, ".L%d:\n", l2);
         break;
     case NK_DO:
-        fprintf(fp, "; %s(%d) DO\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) DO\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_FOR:
-        fprintf(fp, "; %s(%d) FOR\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) FOR\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_GOTO:
-        fprintf(fp, "; %s(%d) GOTO\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) GOTO\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_CONTINUE:
-        fprintf(fp, "; %s(%d) CONTINUE\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) CONTINUE\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_BREAK:
-        fprintf(fp, "; %s(%d) BREAK\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) BREAK\n", np->pos.filename, np->pos.line);
         /*TODO*/
         break;
     case NK_RETURN:
-        fprintf(fp, "; %s(%d) RETURN ", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) RETURN ", np->pos.filename, np->pos.line);
         if (np->u.link.left) {
             fprint_node(fp, 0, np->u.link.left);
             fprintf(fp, "\n");
@@ -356,11 +356,11 @@ static bool gen_stmt(FILE *fp, NODE *np)
         fprintf(fp, "    ret\n");
         break;
     case NK_LABEL:
-        fprintf(fp, "; %s(%d) LABEL %s\n", np->pos.filename, np->pos.line,
+        fprintf(fp, "# %s(%d) LABEL %s\n", np->pos.filename, np->pos.line,
                     np->u.idnode.id);
         break;
     case NK_EXPR:
-        fprintf(fp, "; %s(%d) EXPR ", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) EXPR ", np->pos.filename, np->pos.line);
         fprint_node(fp, 0, np->u.link.left);
         fprintf(fp, "\n");
         if (!gen_expr(fp, np->u.link.left))
