@@ -39,6 +39,14 @@ int get_int_lit(PARSER *pars)
     return pars->scan->num;
 }
 
+STRING *get_str(PARSER *pars)
+{
+    assert(pars);
+    assert(pars->scan);
+    assert(pars->token == TK_STRING_LIT);
+    return pars->scan->str;
+}
+
 #ifdef NDEBUG
 #define next(pars)  ((pars)->token = next_token((pars)->scan))
 #else
@@ -426,7 +434,7 @@ static bool parse_primary_expression(PARSER *pars, NODE **exp)
         break;
     case TK_STRING_LIT:
         TRACE("parse_primary_expression", "STRING_LIT");
-        /*TODO impl string literal*/
+        *exp = new_node_string(&pos, get_str(pars));
         next(pars);
         break;
     case TK_UINT_LIT:

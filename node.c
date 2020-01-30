@@ -1,5 +1,7 @@
 #include "minicc.h"
 
+static TYPE *s_type_string = NULL;
+
 NODE *new_node(NODE_KIND kind, const POS *pos, TYPE *typ)
 {
     NODE *np = (NODE*) alloc(sizeof (NODE));
@@ -62,6 +64,16 @@ NODE *new_node_num_node(NODE_KIND kind, const POS *pos, TYPE *typ,
     NODE *np = new_node(kind, pos, typ);
     np->u.num_node.node = nodep;
     np->u.num_node.num = num;
+    return np;
+}
+
+NODE *new_node_string(const POS *pos, STRING *str)
+{
+    NODE *np;
+    if (s_type_string == NULL)
+        s_type_string = new_type(T_POINTER, &g_type_uchar);
+    np = new_node(NK_STRING_LIT, pos, s_type_string);
+    np->u.str = str;
     return np;
 }
 
@@ -469,8 +481,14 @@ void fprint_node(FILE *fp, int indent, const NODE *np)
     case NK_ULONG_LIT:
     case NK_FLOAT_LIT:
     case NK_DOUBLE_LIT:
-    case NK_STRING_LIT:
         /*TODO impl literal */
+        break;
+    case NK_STRING_LIT:
+        fprintf(fp, "\"%s\"", np->u.str->s);
+        if (is_debug("node_type")) {
+            fprintf(fp, ":");
+            fprint_type(fp, np->type);
+        }
         break;
     }
 }

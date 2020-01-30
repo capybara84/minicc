@@ -22,7 +22,7 @@ static const char *get_var_addr(const SYMBOL *sym)
     static char buf[64];
     switch (sym->kind) {
     case SK_GLOBAL:
-        sprintf(buf, "%s", sym->id);
+        sprintf(buf, "_%s", sym->id);
         break;
     case SK_LOCAL:
         sprintf(buf, "[rbp-%d]", sym->offset + 4);
@@ -212,7 +212,7 @@ static bool gen_expr(FILE *fp, NODE *np)
                 return false;
             assert(np->u.link.left);
             if (np->u.link.left->kind == NK_ID) {
-                fprintf(fp, "    call %s\n", np->u.link.left->u.sym->id);
+                fprintf(fp, "    call _%s\n", np->u.link.left->u.sym->id);
             } else {
                 if (!gen_expr(fp, np->u.link.left))
                     return false;
@@ -252,7 +252,9 @@ static bool gen_expr(FILE *fp, NODE *np)
     case NK_ULONG_LIT:
     case NK_FLOAT_LIT:
     case NK_DOUBLE_LIT:
+        break;
     case NK_STRING_LIT:
+        fprintf(fp, "    mov eax, .L_S%d\n", np->u.str->num); 
         break;
     default:
         error(&np->pos, "couldn't generate expression code");
@@ -382,9 +384,9 @@ static bool gen_func(FILE *fp, SYMBOL *sym)
 {
     if (sym->body) {
         if (!sym_is_static(sym))
-            fprintf(fp, ".global %s\n", sym->id);
+            fprintf(fp, ".global _%s\n", sym->id);
         if (!sym_is_extern(sym))
-            fprintf(fp, "%s:\n", sym->id);
+            fprintf(fp, "_%s:\n", sym->id);
     }
     fprint_func_comment(fp, sym);
     if (sym->body) {
@@ -413,13 +415,46 @@ static bool gen_func(FILE *fp, SYMBOL *sym)
 
 static bool gen_data(FILE *fp, SYMBOL *sym)
 {
-    fprintf(fp, "%s:\n    .zero 8\n", sym->id);
+    fprintf(fp, "_%s:\n    .zero 8\n", sym->id);
     return true;
+}
+
+static void fprint_asciz(FILE *fp, const char *s)
+{
+    int c;
+    while ((c = *s++) != '\0') {
+        switch (c) {
+        case '\a':  fprintf(fp, "\\a"); break;
+        case '\b':  fprintf(fp, "\\b"); break;
+        case '\f':  fprintf(fp, "\\f"); break;
+        case '\n':  fprintf(fp, "\\n"); break;
+        case '\r':  fprintf(fp, "\\r"); break;
+        case '\t':  fprintf(fp, "\\t"); break;
+        case '\v':  fprintf(fp, "\\v"); break;
+        case '\\':  fprintf(fp, "\\\\"); break;
+        case '\'':  fprintf(fp, "\\'"); break;
+        case '"':   fprintf(fp, "\\\""); break;
+        default:
+            if (isprint(c))
+                fprintf(fp, "%c", c);
+            else
+                fprintf(fp, "\\x%x", c);
+            break;
+        }
+    }
+}
+
+static void gen_string(FILE *fp, STRING *str)
+{
+    fprintf(fp, ".L_S%d:\n    .asciz \"", str->num);
+    fprint_asciz(fp, str->s);
+    fprintf(fp, "\"\n");
 }
 
 static bool gen_symtab(FILE *fp, SYMTAB *tab)
 {
     SYMBOL *sym;
+    STRING *s;
     if (tab == NULL)
         return true;
     if (is_debug("gen"))
@@ -427,6 +462,9 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_GLOBAL && !gen_data(fp, sym))
             return false;
+    }
+    for (s = g_string_pool.head; s != NULL; s = s->next) {
+        gen_string(fp, s);
     }
     if (is_debug("gen"))
         printf("gen function...\n");

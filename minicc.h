@@ -51,6 +51,19 @@ void error(const POS *pos, const char *s, ...);
 void *alloc(size_t size);
 char *str_dup(const char *s);
 
+typedef struct string {
+    struct string *next;
+    char *s;
+    int num;
+} STRING;
+typedef struct string_pool {
+    STRING *head;
+    STRING *tail;
+} STRING_POOL;
+
+extern STRING_POOL g_string_pool;
+
+
 typedef enum {
     TK_EOF, TK_ID, TK_CHAR_LIT, TK_INT_LIT, TK_UINT_LIT,
     TK_LONG_LIT, TK_ULONG_LIT, TK_FLOAT_LIT, TK_DOUBLE_LIT,
@@ -78,6 +91,7 @@ typedef struct {
     POS pos;
     int num;
     char *id;
+    STRING *str;
 } SCANNER;
 
 SCANNER *open_scanner_text(const char *filename, const char *text);
@@ -240,6 +254,7 @@ struct node {
             NODE *node;
             int num;
         } num_node;
+        STRING *str;
         int num;
         const char *id;
         SYMBOL *sym;
@@ -256,6 +271,7 @@ NODE *new_node_idnode(NODE_KIND kind, const POS *pos, TYPE *typ,
         NODE *ep, const char *id);
 NODE *new_node_num_node(NODE_KIND kind, const POS *pos, TYPE *typ,
         NODE *np, int num);
+NODE *new_node_string(const POS *pos, STRING *str);
 NODE *node_link(NODE_KIND kind, const POS *pos, NODE *n, NODE *top);
 bool calc_constant_expr(const NODE *np, int *result);
 const char *get_node_op_string(NODE_KIND kind);
