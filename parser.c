@@ -277,6 +277,15 @@ static bool is_unary_operator(PARSER *pars)
     return is_token_with_array(pars, begin_with, COUNT_OF(begin_with));
 }
 
+static bool is_postfix_operator(PARSER *pars)
+{
+    static TOKEN begin_with[] = {
+        TK_LBRA, TK_LPAR, TK_DOT, TK_PTR, TK_INC, TK_DEC,
+    };
+    assert(pars);
+    return is_token_with_array(pars, begin_with, COUNT_OF(begin_with));
+}
+
 #define is_specifier_qualifier_list(p)  is_type_specifier_or_qualifier(p)
 #define is_struct_declaration(p)        is_specifier_qualifier_list(p)
 
@@ -418,7 +427,6 @@ static bool parse_primary_expression(PARSER *pars, NODE **exp)
     case TK_STRING_LIT:
         TRACE("parse_primary_expression", "STRING_LIT");
         /*TODO impl string literal*/
-        assert(0);
         next(pars);
         break;
     case TK_UINT_LIT:
@@ -471,61 +479,63 @@ static bool parse_postfix_expression(PARSER *pars, NODE **exp)
 
     if (!parse_primary_expression(pars, exp))
         return false;
-    pos = *get_pos(pars);
-    switch (pars->token) {
-    case TK_LBRA:
-        next(pars);
-        if (!parse_expression(pars, &ep))
-            return false;
-        if (!expect(pars, TK_RBRA))
-            return false;
-        typ = type_check_array(&pos, (*exp)->type, ep->type);
-        *exp = new_node2(NK_ARRAY, &pos, typ, *exp, ep);
-        break;
-    case TK_LPAR:
-        next(pars);
-        if (!is_token(pars, TK_RPAR)) {
-            if (!parse_argument_expression_list(pars, &ep))
+    while (is_postfix_operator(pars)) {
+        pos = *get_pos(pars);
+        switch (pars->token) {
+        case TK_LBRA:
+            next(pars);
+            if (!parse_expression(pars, &ep))
                 return false;
+            if (!expect(pars, TK_RBRA))
+                return false;
+            typ = type_check_array(&pos, (*exp)->type, ep->type);
+            *exp = new_node2(NK_ARRAY, &pos, typ, *exp, ep);
+            break;
+        case TK_LPAR:
+            next(pars);
+            if (!is_token(pars, TK_RPAR)) {
+                if (!parse_argument_expression_list(pars, &ep))
+                    return false;
+            }
+            if (!expect(pars, TK_RPAR))
+                return false;
+            if (ep)
+                typ = type_check_call(&pos, (*exp)->type, ep->type);
+            else
+                typ = type_check_call(&pos, (*exp)->type, NULL);
+            *exp = new_node2(NK_CALL, &pos, typ, *exp, ep);
+            break;
+        case TK_DOT:
+            next(pars);
+            if (!expect_id(pars))
+                return false;
+            id = get_id(pars);
+            typ = type_check_idnode(&pos, NK_DOT, (*exp)->type, id);
+            *exp = new_node_idnode(NK_DOT, &pos, typ, *exp, id);
+            next(pars);
+            break;
+        case TK_PTR:
+            next(pars);
+            if (!expect_id(pars))
+                return false;
+            id = get_id(pars);
+            typ = type_check_idnode(&pos, NK_PTR, (*exp)->type, id);
+            *exp = new_node_idnode(NK_PTR, &pos, typ, *exp, id);
+            next(pars);
+            break;
+        case TK_INC:
+            next(pars);
+            typ = type_check_postfix(&pos, NK_POSTINC, (*exp)->type);
+            *exp = new_node1(NK_POSTINC, &pos, typ, *exp);
+            break;
+        case TK_DEC:
+            next(pars);
+            typ = type_check_postfix(&pos, NK_POSTDEC, (*exp)->type);
+            *exp = new_node1(NK_POSTDEC, &pos, typ, *exp);
+            break;
+        default:
+            break;
         }
-        if (!expect(pars, TK_RPAR))
-            return false;
-        if (ep)
-            typ = type_check_call(&pos, (*exp)->type, ep->type);
-        else
-            typ = type_check_call(&pos, (*exp)->type, NULL);
-        *exp = new_node2(NK_CALL, &pos, typ, *exp, ep);
-        break;
-    case TK_DOT:
-        next(pars);
-        if (!expect_id(pars))
-            return false;
-        id = get_id(pars);
-        typ = type_check_idnode(&pos, NK_DOT, (*exp)->type, id);
-        *exp = new_node_idnode(NK_DOT, &pos, typ, *exp, id);
-        next(pars);
-        break;
-    case TK_PTR:
-        next(pars);
-        if (!expect_id(pars))
-            return false;
-        id = get_id(pars);
-        typ = type_check_idnode(&pos, NK_PTR, (*exp)->type, id);
-        *exp = new_node_idnode(NK_PTR, &pos, typ, *exp, id);
-        next(pars);
-        break;
-    case TK_INC:
-        next(pars);
-        typ = type_check_postfix(&pos, NK_POSTINC, (*exp)->type);
-        *exp = new_node1(NK_POSTINC, &pos, typ, *exp);
-        break;
-    case TK_DEC:
-        next(pars);
-        typ = type_check_postfix(&pos, NK_POSTDEC, (*exp)->type);
-        *exp = new_node1(NK_POSTDEC, &pos, typ, *exp);
-        break;
-    default:
-        break;
     }
     LEAVE("parse_postfix_expression");
     return true;
