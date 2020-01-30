@@ -458,6 +458,12 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     if (tab == NULL)
         return true;
     if (is_debug("gen"))
+        printf("gen function...\n");
+    for (sym = tab->head; sym != NULL; sym = sym->next) {
+        if (sym->kind == SK_FUNC && !gen_func(fp, sym))
+            return false;
+    }
+    if (is_debug("gen"))
         printf("gen data...\n");
     for (sym = tab->head; sym != NULL; sym = sym->next) {
         if (sym->kind == SK_GLOBAL && !gen_data(fp, sym))
@@ -465,12 +471,6 @@ static bool gen_symtab(FILE *fp, SYMTAB *tab)
     }
     for (s = g_string_pool.head; s != NULL; s = s->next) {
         gen_string(fp, s);
-    }
-    if (is_debug("gen"))
-        printf("gen function...\n");
-    for (sym = tab->head; sym != NULL; sym = sym->next) {
-        if (sym->kind == SK_FUNC && !gen_func(fp, sym))
-            return false;
     }
     return true;
 }
