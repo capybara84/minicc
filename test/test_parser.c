@@ -1,17 +1,19 @@
 #include "minicc.h"
 
-static int test(const char *filename)
+static bool test(const char *filename)
 {
     PARSER *pars;
-    int result;
+    bool result;
 
     pars = open_parser(filename);
     if (pars == NULL) {
         fprintf(stderr, "couldn't open '%s'\n", filename);
-        return 1;
+        return false;
     }
-    result = parse(pars) ? 0 : 1;
+    result = parse(pars);
     close_parser(pars);
+
+    print_global_symtab();
     return result;
 }
 
@@ -32,6 +34,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
         usage();
+    init_symtab();
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (argv[i][1] == 'd') {
@@ -46,8 +49,9 @@ int main(int argc, char *argv[])
                 }
             } else
                 usage();
-        } else if (test(argv[i]) != 0)
+        } else if (!test(argv[i]))
             result = 1;
     }
+    term_symtab();
     return result;
 }

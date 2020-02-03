@@ -1,0 +1,28 @@
+GLOBAL SYMTAB
+scope:0
+SYM i GLOBAL (p0, l0):int
+SYM j GLOBAL (p0, l0):int
+SYM c GLOBAL (p0, l0):uchar
+SYM a GLOBAL (p0, l0):ARRAY [10] of int
+SYM p GLOBAL (p0, l0):POINTER to ulong
+SYM foo FUNC (p0, l0):FUNC void (void)
+{
+}
+SYM main FUNC (p0, l0):FUNC int (int argc, ARRAY [] of POINTER to uchar argv)
+{
+}
+SYM c0 GLOBAL (p0, l0):POINTER to const int
+SYM c1 GLOBAL (p0, l0):const POINTER to int
+SYM c2 GLOBAL (p0, l0):const POINTER to const int
+SYM a0 GLOBAL (p0, l0):ARRAY [10] of POINTER to int
+SYM a1 GLOBAL (p0, l0):POINTER to ARRAY [10] of int
+SYM sca GLOBAL (p0, l0):static ushort
+SYM scb GLOBAL (p0, l0):extern double
+SYM cvi GLOBAL (p0, l0):const volatile int
+SYM vci GLOBAL (p0, l0):const volatile int
+SYM cci GLOBAL (p0, l0):const int
+SYM vvi GLOBAL (p0, l0):volatile int
+SYM vcvi GLOBAL (p0, l0):const volatile int
+SYM bar FUNC (p0, l0):FUNC void (volatile int x, const int y, const volatile int z)
+{
+}

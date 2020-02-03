@@ -1,0 +1,118 @@
+test_parser2.c(3): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(4): error: illegal storage class on file-scoped variable (at token 'auto')
+test_parser2.c(4): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(5): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(6): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(7): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(9): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(10): error: invalid storage class specifier in function declarator (at token 'int')
+test_parser2.c(13): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(14): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(15): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(16): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(20): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(21): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(22): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(23): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(25): error: illegal storage class on file-scoped variable (at token 'int')
+test_parser2.c(29): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(30): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(31): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(36): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(37): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(40): error: invalid storage class specifier in function declarator (at token 'int')
+test_parser2.c(43): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(44): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(49): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(52): error: invalid storage class specifier in function declarator (at token 'int')
+test_parser2.c(55): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(62): error: invalid storage class specifier in function declarator (at token 'int')
+test_parser2.c(70): warning: duplicate declaration specifier
+test_parser2.c(72): error: cannot combine declaration specifier (at token 'int')
+test_parser2.c(75): warning: type specifier missing, defaults to 'int'
+test_parser2.c(76): warning: type specifier missing, defaults to 'int'
+GLOBAL SYMTAB
+scope:0
+SYM auto_file_scoped GLOBAL (p0, l0):int
+SYM register_auto_file_scoped GLOBAL (p0, l0):int
+SYM static_auto_file_scoped GLOBAL (p0, l0):static int
+SYM extern_auto_file_scoped GLOBAL (p0, l0):extern int
+SYM typedef_auto_file_scoped GLOBAL (p0, l0):typedef int
+SYM auto_func FUNC (p1, l20):FUNC int (int x)
+{
+scope:1
+  SYM x PARAM (p0, l0):int
+  SYM auto_local LOCAL (p0, l0):auto int
+  SYM register_auto_local LOCAL (p0, l4):register int
+  SYM static_auto_local LOCAL (p0, l8):static int
+  SYM extern_auto_local LOCAL (p0, l12):extern int
+  SYM typedef_auto_local LOCAL (p0, l16):typedef int
+  {
+    return 0;
+  }
+}
+SYM register_file_scoped GLOBAL (p0, l0):int
+SYM static_register_file_scoped GLOBAL (p0, l0):static int
+SYM extern_register_file_scoped GLOBAL (p0, l0):extern int
+SYM typedef_register_file_scoped GLOBAL (p0, l0):typedef int
+SYM register_func FUNC (p1, l16):FUNC int (register int x)
+{
+scope:1
+  SYM x PARAM (p0, l0):register int
+  SYM register_local LOCAL (p0, l0):register int
+  SYM static_register_local LOCAL (p0, l4):static int
+  SYM extern_register_local LOCAL (p0, l8):extern int
+  SYM typedef_register_local LOCAL (p0, l12):typedef int
+  {
+    return 0;
+  }
+}
+SYM static_file_scoped GLOBAL (p0, l0):static int
+SYM extern_static_file_scoped GLOBAL (p0, l0):extern int
+SYM typedef_static_file_scoped GLOBAL (p0, l0):typedef int
+SYM static_func FUNC (p1, l12):FUNC static int (int x)
+{
+scope:1
+  SYM x PARAM (p0, l0):int
+  SYM static_local LOCAL (p0, l0):static int
+  SYM extern_static_local LOCAL (p0, l4):extern int
+  SYM typedef_static_local LOCAL (p0, l8):typedef int
+  {
+    return 0;
+  }
+}
+SYM extern_file_scoped GLOBAL (p0, l0):extern int
+SYM typedef_extern_file_scoped GLOBAL (p0, l0):typedef int
+SYM extern_func FUNC (p1, l8):FUNC extern int (int x)
+{
+scope:1
+  SYM x PARAM (p0, l0):int
+  SYM extern_local LOCAL (p0, l0):extern int
+  SYM typedef_extern_local LOCAL (p0, l4):typedef int
+  {
+    return 0;
+  }
+}
+SYM typedef_file_scoped GLOBAL (p0, l0):typedef int
+SYM typedef_func FUNC (p0, l0):FUNC typedef int (int x)
+{
+}
+SYM func FUNC (p0, l4):FUNC int ()
+{
+scope:1
+  SYM typedef_local LOCAL (p0, l0):typedef int
+  {
+    return 0;
+  }
+}
+SYM I GLOBAL (p0, l0):typedef int
+SYM a GLOBAL (p0, l0):int
+SYM scfoo FUNC (p0, l0):FUNC int ()
+{
+scope:1
+  {
+  }
+}
+SYM scbar FUNC (p0, l0):FUNC int ()
+{
+}

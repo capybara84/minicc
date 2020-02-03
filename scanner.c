@@ -3,12 +3,33 @@
 /* string buffer / number parse buffer */
 #define MAX_BUFFER  256
 
+STRING_POOL g_string_pool = { NULL, NULL };
+static int s_string_num = 0;
+
 typedef struct ident {
     struct ident *next;
     char *id;
 } IDENT;
 
 static IDENT *s_ident_top = NULL;
+
+
+STRING *new_string(const char *s)
+{
+    STRING *p = (STRING*) alloc(sizeof (STRING));
+    p->s = str_dup(s);
+    p->num = s_string_num++;
+    p->next = NULL;
+    if (g_string_pool.head == NULL) {
+        assert(g_string_pool.tail == NULL);
+        g_string_pool.head = g_string_pool.tail = p;
+    } else {
+        assert(g_string_pool.tail);
+        g_string_pool.tail->next = p;
+        g_string_pool.tail = p;
+    }
+    return p;
+}
 
 char* new_ident(const char *s)
 {
@@ -60,6 +81,7 @@ SCANNER *open_scanner_text(const char *filename, const char *text)
     s->pos.line = 1;
     s->num = 0;
     s->id = NULL;
+    s->str = NULL;
     return s;
 }
 
@@ -222,7 +244,7 @@ static TOKEN scan_num(SCANNER *scan)
     }
     buffer[i] = '\0';
     scan->num = atoi(buffer);
-    /* TODO unsigned, long, float, double */
+    /* TODO impl unsigned, long, float, double */
     return TK_INT_LIT;
 }
 
@@ -246,7 +268,7 @@ static unsigned char scan_a_char(SCANNER *scan)
         case 'x':
         case 'o':
         default:
-            /*TODO*/
+            /*TODO impl 0xHH, 0OO*/
             c = scan->ch;
             break;
         }
@@ -280,7 +302,7 @@ static TOKEN scan_str(SCANNER *scan)
             buffer[i++] = c;
     }
     buffer[i] = '\0';
-    scan->id = buffer;  /*TODO string pool */
+    scan->str = new_string(buffer);
 
     if (scan->ch != '\"')
         error(&scan->pos, "missing \" character");
