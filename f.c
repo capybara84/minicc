@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int _fact(int n);
+int fact(int n);
 
 /*
 int fact(int n)
@@ -19,7 +19,7 @@ int fact(int n)
 int main()
 {
     int i;
-    for (i = 0; i < 10; i++)
-        printf("fact(%d) = %d\n", i, _fact(i));
+    for (i = 0; i < 100; i++)
+        printf("fact(%d) = %d\n", i, fact(i));
     return 0;
 }

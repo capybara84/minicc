@@ -127,32 +127,32 @@ static bool gen_expr(FILE *fp, NODE *np)
         case NK_EQ:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    sete al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_NEQ:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    setne al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_LT:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    setl al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_GT:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    setg al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_LE:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    setle al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_GE:
             fprintf(fp, "    cmp eax, edi\n");
             fprintf(fp, "    setge al\n");
-            fprintf(fp, "    movzb eax, al\n");
+            fprintf(fp, "    movzx eax, al\n");
             break;
         case NK_SHL:
         case NK_SHR:
@@ -283,7 +283,9 @@ static bool gen_stmt(FILE *fp, NODE *np)
             return false;
         break;
     case NK_IF:
-        fprintf(fp, "# %s(%d) IF\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) IF ", np->pos.filename, np->pos.line);
+        fprint_node(fp, 0, np->u.link.left);
+        fprintf(fp, "\n");
         gen_expr(fp, np->u.link.left);
         fprintf(fp, "    cmp eax, 0\n");
         l1 = new_label();
@@ -293,6 +295,7 @@ static bool gen_stmt(FILE *fp, NODE *np)
         gen_stmt(fp, np->u.link.right->u.link.left);
         l2 = new_label();
         fprintf(fp, "    jmp .L%d\n", l2);
+        fprintf(fp, "# %s(%d) ELSE ", np->pos.filename, np->pos.line);
         fprintf(fp, ".L%d:\n", l1);
         if (np->u.link.right->u.link.right) {
             gen_stmt(fp, np->u.link.right->u.link.right);
@@ -312,7 +315,9 @@ static bool gen_stmt(FILE *fp, NODE *np)
         /*TODO*/
         break;
     case NK_WHILE:
-        fprintf(fp, "# %s(%d) WHILE\n", np->pos.filename, np->pos.line);
+        fprintf(fp, "# %s(%d) WHILE ", np->pos.filename, np->pos.line);
+        fprint_node(fp, 0, np->u.link.left);
+        fprintf(fp, "\n");
         l1 = new_label();
         fprintf(fp, ".L%d:\n", l1);
         gen_expr(fp, np->u.link.left);
@@ -350,7 +355,8 @@ static bool gen_stmt(FILE *fp, NODE *np)
             fprintf(fp, "\n");
             if (!gen_expr(fp, np->u.link.left))
                 return false;
-        }
+        } else
+            fprintf(fp, "\n");
         fprintf(fp, "    mov rsp, rbp\n");
         fprintf(fp, "    pop rbp\n");
         fprintf(fp, "    ret\n");

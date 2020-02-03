@@ -4,8 +4,8 @@ void print_num(int n)
 {
     printf("%d\n", n);
 }
-*/
 void print_num(int n);
+*/
 
 int fact(int n)
 {
